@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>商品ラインアップ</title>
+    <title>自販機アンケート</title>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600&family=Noto+Sans+JP:wght@400;500;700&display=swap');
 
@@ -366,9 +366,9 @@
       <header class="hero">
         <div class="hero-badges">
           <span class="pill accent">Vending Lineup</span>
-          <span class="pill alt">画像プレビュー付き</span>
+          <span class="pill alt">１つ選ぶだけ</span>
         </div>
-        <h1 id="pageTitle">商品ラインアップ</h1>
+        <h1 id="pageTitle"></h1>
         <p id="pageLead" class="lead">メーカー別に商品と価格をまとめています。</p>
       </header>
 
@@ -480,8 +480,8 @@
         renderControls(manufacturers, manufacturer);
 
         if (categories.length) {
-          document.getElementById('pageTitle').textContent = `${manufacturer || 'ラインアップ'} の商品ラインアップ`;
-          document.getElementById('pageLead').textContent = 'カテゴリーごとに商品画像と価格をまとめました。';
+          document.getElementById('pageTitle').textContent = `${manufacturer || 'ラインアップ'} メーカー一覧`;
+          document.getElementById('pageLead').textContent = '置きたいメーカーを一つ選んでください';
 
           container.innerHTML = '';
           categories.forEach((category) => {
