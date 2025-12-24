@@ -8,7 +8,7 @@ var DEFAULT_MANUFACTURERS_FOLDER_ID = '1AJd4BTFTVrLNep44PDz1AuwSF_5TFxdx';
  */
 function doGet(e) {
   var params = (e && e.parameter) || {};
-  var maker = params.maker || 'ラインアップ';
+  var maker = params.maker || '';
   var folderId = params.folderId || DEFAULT_MANUFACTURERS_FOLDER_ID || '';
 
   var template = HtmlService.createTemplateFromFile('VendingLineup');
@@ -33,7 +33,7 @@ function doGet(e) {
  */
 function getVendingLineup(maker, folderId) {
   var result = {
-    manufacturer: maker || 'ラインアップ',
+    manufacturer: maker || '',
     categories: [],
     manufacturers: getManufacturers(),
   };
