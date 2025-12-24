@@ -218,18 +218,19 @@
         aspect-ratio: 4 / 3;
         min-height: 120px;
         border-radius: 12px;
-        background: #f5f6fb;
+        background: #fff;
         border: 1px solid var(--border);
         overflow: hidden;
         display: flex;
         align-items: center;
         justify-content: center;
+        padding: 10px;
       }
 
       .media-frame img {
         width: 100%;
         height: 100%;
-        object-fit: cover;
+        object-fit: contain;
         display: block;
         background: transparent;
       }
@@ -246,6 +247,26 @@
         margin-top: 6px;
         color: #3a3f52;
         text-align: center;
+      }
+
+      .maker-list {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-top: 8px;
+      }
+
+      .maker-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 12px;
+        background: #f5f6fb;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        font-weight: 700;
+        color: #2f3345;
       }
 
       .table-wrapper {
@@ -370,22 +391,6 @@
         return wrapper;
       }
 
-      function renderQuestionOneIntro(container) {
-        const section = document.createElement('section');
-        section.className = 'block';
-        section.innerHTML = `
-          <div class="control-row">
-            <div>
-              <p class="eyebrow">質問１</p>
-              <h2>メーカー一覧と商品ラインアップ</h2>
-              <p class="lead">${QUESTION1_DESCRIPTION}</p>
-              <p class="note">${LINEUP_INSTRUCTION}</p>
-            </div>
-          </div>
-        `;
-        container.appendChild(section);
-      }
-
       function renderQuestionTwoSection() {
         const questionTwo = document.getElementById('question2Section');
         questionTwo.className = 'block question-two';
@@ -428,7 +433,6 @@
         });
 
         container.innerHTML = '';
-        renderQuestionOneIntro(container);
         renderQuestionTwoSection();
         applySurveyHeaders(`${QUESTION1_DESCRIPTION} ${LINEUP_INSTRUCTION}`);
 
@@ -439,29 +443,21 @@
         sectionHeader.className = 'section-header';
         sectionHeader.innerHTML = `
           <div>
-            <p class="eyebrow">メーカーと商品</p>
-            <h2>好きなメーカーを選んでください</h2>
-            <p class="section-lead">一覧から一社を選び、下の表で商品ラインアップを確認できます。</p>
+            <p class="eyebrow">質問１</p>
+            <h2>メーカー一覧と商品ラインアップ</h2>
+            <p class="section-lead">${QUESTION1_DESCRIPTION}</p>
+            <p class="note">${LINEUP_INSTRUCTION}</p>
+          </div>
+          <div class="maker-list">
+            ${(manufacturers.length
+              ? manufacturers
+                  .map((m) => `<span class="maker-pill">${m.name}</span>`)
+                  .join('')
+              : `<span class="maker-pill">${manufacturer || 'メーカー未設定'}</span>`)}
           </div>
         `;
 
-        const controls = document.createElement('div');
-        controls.className = 'control-row';
-        controls.innerHTML = `
-          <label>
-            メーカー選択
-            <select>
-              ${(manufacturers.length
-                ? manufacturers
-                    .map((m) => `<option value="${m.name}">${m.name}</option>`)
-                    .join('')
-                : `<option>${manufacturer || 'メーカー未設定'}</option>`)}
-            </select>
-          </label>
-        `;
-
         section.appendChild(sectionHeader);
-        section.appendChild(controls);
 
         if (allItems.length) {
           const imageGrid = document.createElement('div');
