@@ -141,9 +141,12 @@
     <main id="lineupContainer"></main>
 
     <script>
+      const makerFromTemplate = <?!= JSON.stringify(maker || '') ?>;
+      const folderIdFromTemplate = <?!= JSON.stringify(folderId || '') ?>;
+
       const params = new URLSearchParams(window.location.search);
-      const maker = params.get('maker') || '';
-      const folderId = params.get('folderId') || '';
+      const maker = params.get('maker') || makerFromTemplate || '';
+      const folderId = params.get('folderId') || folderIdFromTemplate || '';
 
       document.addEventListener('DOMContentLoaded', function () {
         google.script.run
