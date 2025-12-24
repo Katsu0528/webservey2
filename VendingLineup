@@ -50,17 +50,6 @@
         color: var(--muted);
       }
 
-      .back-link {
-        color: var(--accent);
-        font-weight: 700;
-        text-decoration: none;
-      }
-
-      .back-link:hover,
-      .back-link:focus-visible {
-        text-decoration: underline;
-      }
-
       main {
         max-width: 1100px;
         margin: 0 auto;
@@ -135,7 +124,6 @@
         <h1 id="pageTitle">商品ラインアップ</h1>
         <p id="pageLead" class="lead">メーカー別に商品と価格をまとめています。</p>
       </div>
-      <a id="backLink" class="back-link" href="?view=vending-survey" target="_top">← アンケートに戻る</a>
     </header>
 
     <main id="lineupContainer"></main>
@@ -163,7 +151,8 @@
 
         const categories = (data && data.categories) || [];
         if (!categories.length) {
-          container.innerHTML = '<p class="empty">表示できる商品情報がありません。</p>';
+          container.innerHTML =
+            '<p class="empty">現在表示できる商品情報がありません。商品の準備が整い次第、こちらに表示されます。</p>';
           return;
         }
 
