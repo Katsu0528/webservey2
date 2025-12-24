@@ -244,43 +244,6 @@
         padding-bottom: 6px;
       }
 
-      .maker-ribbon {
-        display: flex;
-        gap: 12px;
-        overflow-x: auto;
-        padding: 10px 6px 4px;
-        margin: 10px -4px 6px;
-      }
-
-      .maker-chip {
-        flex: 0 0 160px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 8px;
-        padding: 10px;
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        background: #fff;
-        box-shadow: 0 8px 18px rgba(61, 78, 255, 0.07);
-      }
-
-      .maker-chip img {
-        width: 100%;
-        height: 140px;
-        object-fit: contain;
-        border-radius: 10px;
-        background: #f8f9fc;
-        border: 1px solid var(--border);
-        padding: 8px;
-      }
-
-      .maker-chip figcaption {
-        font-weight: 700;
-        color: #2f3345;
-        text-align: center;
-      }
-
       .image-grid figcaption {
         font-size: 13px;
         margin-top: 6px;
@@ -297,7 +260,8 @@
         display: flex;
         flex-direction: column;
         gap: 8px;
-        min-width: 220px;
+        flex: 0 0 240px;
+        width: 240px;
         cursor: pointer;
         transition: 0.18s ease;
         box-shadow: 0 10px 20px rgba(61, 78, 255, 0.06);
@@ -460,6 +424,17 @@
       const maker = params.get('maker') || makerFromTemplate || '';
       const folderId = params.get('folderId') || folderIdFromTemplate || '';
 
+      function buildCatalogUrl(makerName, folderId) {
+        if (!folderId) return '';
+
+        const url = new URL(window.location.href);
+        url.search = '';
+        url.hash = '';
+        url.searchParams.set('maker', makerName || '');
+        url.searchParams.set('folderId', folderId);
+        return url.toString();
+      }
+
       function toEmbeddableUrl(src) {
         if (!src) return '';
 
@@ -507,19 +482,6 @@
 
         wrapper.appendChild(img);
         return wrapper;
-      }
-
-      function createThumbnailElement(src, alt) {
-        const img = document.createElement('img');
-        img.loading = 'lazy';
-        img.alt = alt || 'メーカー画像';
-        img.referrerPolicy = 'no-referrer';
-        img.src = toEmbeddableUrl(src) || FALLBACK_IMAGE;
-        img.onerror = () => {
-          img.onerror = null;
-          img.src = FALLBACK_IMAGE;
-        };
-        return img;
       }
 
       function enableImageSelection(imageGrid) {
@@ -592,7 +554,12 @@
         const normalizedManufacturers = manufacturers.map((entry) => ({
           ...entry,
           name: entry.name || trimExtension(entry.imageName),
+          catalogUrl: buildCatalogUrl(entry.name || trimExtension(entry.imageName), entry.folderId),
         }));
+
+        const normalizedMap = new Map(
+          normalizedManufacturers.map((entry) => [getMakerDisplayName(entry), entry])
+        );
 
         const folderBasedManufacturers = allItems.slice(0, MAX_MANUFACTURERS).map((item, index) => ({
           name: trimExtension(item.name) || `画像${index + 1}`,
@@ -613,29 +580,26 @@
             ? normalizedManufacturers
             : [fallbackMaker];
 
-        const paddedManufacturers = prioritizedManufacturers.slice(0, MAX_MANUFACTURERS);
+        const paddedManufacturers = prioritizedManufacturers
+          .slice(0, MAX_MANUFACTURERS)
+          .map((entry) => {
+            const displayName = getMakerDisplayName(entry);
+            const matched = normalizedMap.get(displayName) || {};
+            return {
+              ...entry,
+              folderId: entry.folderId || matched.folderId || '',
+              catalogUrl: entry.catalogUrl || matched.catalogUrl || '',
+            };
+          });
         while (paddedManufacturers.length < MAX_MANUFACTURERS) {
-          paddedManufacturers.push({ name: '未設定', imageUrl: '', imageName: '' });
+          paddedManufacturers.push({ name: '未設定', imageUrl: '', imageName: '', catalogUrl: '', folderId: '' });
         }
-
-        const makerListMarkup = prioritizedManufacturers
-          .map((m) => `<span class="maker-pill">${getMakerDisplayName(m)}</span>`)
-          .join('');
-
-        const lineupSummary = allItems.length
-          ? allItems
-              .map((item) => {
-                const name = trimExtension(item.name) || '商品名未設定';
-                const price = item.price ? ` (¥${item.price})` : '';
-                return `${name}${price}`;
-              })
-              .join(' / ')
-          : '商品情報はまだありません';
 
         const manufacturerEntries = paddedManufacturers.map((makerEntry) => {
           const name = getMakerDisplayName(makerEntry);
           const isKirin = /キリン/.test(name);
           const isAsahi = /アサヒ/.test(name);
+          const catalogUrl = makerEntry.catalogUrl || buildCatalogUrl(name, makerEntry.folderId);
 
           return {
             name,
@@ -645,7 +609,9 @@
               className: isKirin ? 'status-allow' : 'status-deny',
             },
             note: isAsahi ? '※設置できない可能性あり' : '',
-            lineup: lineupSummary,
+            catalogLink: catalogUrl
+              ? { href: catalogUrl, text: 'カタログを見る' }
+              : '準備中',
           };
         });
 
@@ -664,9 +630,6 @@
             <h2>メーカー一覧と商品ラインアップ</h2>
             <p class="section-lead">${QUESTION1_DESCRIPTION}</p>
             <p class="note">${LINEUP_INSTRUCTION}</p>
-          </div>
-          <div class="maker-list">
-            ${makerListMarkup}
           </div>
         `;
 
@@ -690,19 +653,6 @@
         enableImageSelection(imageGrid);
         section.appendChild(imageGrid);
 
-        const ribbon = document.createElement('div');
-        ribbon.className = 'maker-ribbon';
-        manufacturerEntries.forEach((entry) => {
-          const chip = document.createElement('figure');
-          chip.className = 'maker-chip';
-          chip.appendChild(createThumbnailElement(entry.imageUrl, entry.name));
-          const caption = document.createElement('figcaption');
-          caption.textContent = entry.name;
-          chip.appendChild(caption);
-          ribbon.appendChild(chip);
-        });
-        section.appendChild(ribbon);
-
         const tableWrapper = document.createElement('div');
         tableWrapper.className = 'table-wrapper';
         const table = document.createElement('table');
@@ -712,7 +662,7 @@
         const rows = [
           { label: 'メーカー名', accessor: (entry) => entry.name },
           { label: '商品カスタマイズ', accessor: (entry) => entry.customStatus },
-          { label: '商品一覧', accessor: (entry) => entry.lineup, cellClass: 'lineup-text' },
+          { label: 'カタログ', accessor: (entry) => entry.catalogLink, cellClass: 'lineup-text' },
           { label: '備考', accessor: (entry) => entry.note },
         ];
 
@@ -727,9 +677,18 @@
             const td = document.createElement('td');
             const value = row.accessor(entry);
             if (value && typeof value === 'object') {
-              td.textContent = value.text || '';
-              if (value.className) {
-                td.classList.add(value.className);
+              if (value.href) {
+                const link = document.createElement('a');
+                link.href = value.href;
+                link.textContent = value.text || '詳細を見る';
+                link.target = '_blank';
+                link.rel = 'noopener noreferrer';
+                td.appendChild(link);
+              } else {
+                td.textContent = value.text || '';
+                if (value.className) {
+                  td.classList.add(value.className);
+                }
               }
             } else {
               td.textContent = value || '';
