@@ -150,6 +150,27 @@
         justify-content: flex-end;
       }
 
+      .question-two {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .question-two-body {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .question-two textarea {
+        background: #f7f8ff;
+      }
+
+      .question-two-actions {
+        display: flex;
+        justify-content: flex-end;
+      }
+
       button,
       .button {
         display: inline-flex;
@@ -433,6 +454,7 @@
 
       <section id="controls" class="controls"></section>
       <section id="lineupContainer"></section>
+      <section id="question2Section"></section>
     </div>
 
     <script>
@@ -569,10 +591,23 @@
               <p class="lead">${QUESTION1_DESCRIPTION}</p>
               <p class="note">${LINEUP_INSTRUCTION}</p>
             </div>
-            <div>
-              <p class="eyebrow">質問２</p>
-              <h2>欲しいドリンクやカテゴリ</h2>
-              <p class="lead">${QUESTION2_DESCRIPTION}</p>
+          </div>
+        `;
+      }
+
+      function renderQuestionTwoSection() {
+        const questionTwo = document.getElementById('question2Section');
+        questionTwo.className = 'block question-two';
+        questionTwo.innerHTML = `
+          <div>
+            <p class="eyebrow">質問２</p>
+            <h2>欲しいドリンクやカテゴリ</h2>
+            <p class="lead">${QUESTION2_DESCRIPTION}</p>
+          </div>
+          <div class="question-two-body">
+            <textarea placeholder="欲しい商品やカテゴリを自由にご記入ください"></textarea>
+            <div class="question-two-actions">
+              <button type="button">送信</button>
             </div>
           </div>
         `;
@@ -688,6 +723,7 @@
         const shouldShowManufacturers = (!maker || maker === 'ラインアップ') && manufacturers.length;
 
         renderControls();
+        renderQuestionTwoSection();
         applySurveyHeaders(`${QUESTION1_DESCRIPTION} ${LINEUP_INSTRUCTION}`);
 
         if (shouldShowManufacturers) {
