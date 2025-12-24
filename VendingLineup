@@ -365,7 +365,6 @@
     <div class="page">
       <header class="hero">
         <div class="hero-badges">
-          <span class="pill accent">Vending Lineup</span>
           <span class="pill alt">１つ選ぶだけ</span>
         </div>
         <h1 id="pageTitle"></h1>
@@ -480,8 +479,8 @@
         renderControls(manufacturers, manufacturer);
 
         if (categories.length) {
-          document.getElementById('pageTitle').textContent = `${manufacturer || 'ラインアップ'} メーカー一覧`;
-          document.getElementById('pageLead').textContent = '置きたいメーカーを一つ選んでください';
+          document.getElementById('pageTitle').textContent = `新オフィスの自販機を皆さんの投票で決めます！`;
+          document.getElementById('pageLead').textContent = '良いと思うメーカーを一つ選んでください！';
 
           container.innerHTML = '';
           categories.forEach((category) => {
@@ -490,7 +489,7 @@
             section.innerHTML = `
               <div class="section-header">
                 <div>
-                  <p class="eyebrow">ラインアップ</p>
+                  <p class="eyebrow">自販機メーカー一覧</p>
                   <h2>${category.name || 'カテゴリー'}</h2>
                   <p class="section-lead">${(category.items || []).length} 件の商品を表示しています。</p>
                 </div>
@@ -585,23 +584,6 @@
 
         container.innerHTML =
           '<section class="block"><div class="empty">現在表示できる商品情報がありません。商品の準備が整い次第、こちらに表示されます。</div></section>';
-      }
-
-      function renderControls(manufacturers, selectedMaker) {
-        const controls = document.getElementById('controls');
-        if (!controls) return;
-
-        controls.innerHTML = `
-          <section class="block">
-            <div class="section-header">
-              <div>
-                <p class="eyebrow">自動表示</p>
-                <h2>デフォルトラインアップ</h2>
-                <p class="section-lead">指定のドライブフォルダ内の画像を自動で横並び表示し、画像名も併記しています。</p>
-              </div>
-            </div>
-          </section>
-        `;
       }
 
       function showError(err) {
