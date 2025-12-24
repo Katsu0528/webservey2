@@ -144,7 +144,7 @@ function getFirstImageUrl(folder) {
 
 /**
  * 画像を埋め込み表示用の URL として返す。
- * Drive のファイルページ URL では直接表示できないため、uc?export=view を利用する。
+ * Drive のファイルページ URL では直接表示できないため、googleusercontent.com ドメインの URL を利用する。
  *
  * @param {GoogleAppsScript.Drive.File} file
  * @returns {string}
@@ -152,5 +152,5 @@ function getFirstImageUrl(folder) {
 function getImageUrl(file) {
   var id = file && file.getId && file.getId();
   if (!id) return '';
-  return 'https://drive.google.com/uc?export=view&id=' + id;
+  return 'https://lh3.googleusercontent.com/d/' + id;
 }

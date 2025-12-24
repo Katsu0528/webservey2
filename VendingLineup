@@ -379,6 +379,23 @@
       const initialQuestion = params.get('question') || '';
       let currentQuestion = initialQuestion;
 
+      function toEmbeddableUrl(src) {
+        if (!src) return '';
+
+        // If only an ID is passed, return the embeddable URL directly.
+        if (!/^https?:\/\//i.test(src)) {
+          return 'https://lh3.googleusercontent.com/d/' + src;
+        }
+
+        // Normalize common Drive share URLs to the embeddable googleusercontent format.
+        const idMatch = src.match(/(?:\/d\/|id=)([\w-]{10,})/);
+        if (idMatch && idMatch[1]) {
+          return 'https://lh3.googleusercontent.com/d/' + idMatch[1];
+        }
+
+        return src;
+      }
+
       function createImageElement(src, alt) {
         const wrapper = document.createElement('div');
         wrapper.className = 'media-frame';
@@ -394,7 +411,7 @@
         };
 
         img.onerror = applyFallback;
-        img.src = src || FALLBACK_IMAGE;
+        img.src = toEmbeddableUrl(src) || FALLBACK_IMAGE;
 
         wrapper.appendChild(img);
         return wrapper;
