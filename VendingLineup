@@ -239,6 +239,27 @@
         text-align: center;
       }
 
+      .card.selectable {
+        cursor: pointer;
+        transition: 0.2s ease;
+      }
+
+      .card.selectable:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 22px rgba(31, 90, 201, 0.18);
+      }
+
+      .card.selected {
+        border: 2px solid var(--accent-2);
+        box-shadow: 0 14px 28px rgba(108, 140, 255, 0.25);
+        background: linear-gradient(180deg, #f4f6ff 0%, #eaf0ff 60%, #eef3ff 100%);
+      }
+
+      .card.dimmed {
+        filter: grayscale(0.8);
+        opacity: 0.55;
+      }
+
       .card h3,
       .card h4 {
         margin: 0;
@@ -278,6 +299,45 @@
         object-fit: contain;
         display: block;
         background: transparent;
+      }
+
+      .feature-list {
+        list-style: none;
+        padding: 0;
+        margin: 6px 0 0;
+        width: 100%;
+        display: grid;
+        gap: 8px;
+      }
+
+      .feature-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        justify-content: center;
+        font-weight: 700;
+        color: #1f2430;
+      }
+
+      .feature-badge {
+        min-width: 56px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 800;
+        border: 1px solid transparent;
+      }
+
+      .feature-badge.possible {
+        background: #ebf1ff;
+        color: #2f6bff;
+        border-color: #cdd9ff;
+      }
+
+      .feature-badge.unavailable {
+        background: #f3f4f7;
+        color: #8c94ab;
+        border-color: #dadee8;
       }
 
       .meta {
@@ -385,6 +445,29 @@
       const QUESTION2_DESCRIPTION =
         'オフィスの自販機に「これは絶対に欲しい！」という飲み物やカテゴリがあれば、自由にご記入ください。';
 
+      const MANUFACTURER_FEATURES = {
+        'コカ・コーラ': [
+          { label: 'ブランド力・赤色デザイン', status: 'possible' },
+          { label: 'マルチキャッシュレス対応', status: 'possible' },
+          { label: '販売会社指定での設置', status: 'unavailable' },
+        ],
+        サントリー: [
+          { label: 'BOSS などコーヒーが豊富', status: 'possible' },
+          { label: '交通系IC・QR 決済', status: 'possible' },
+          { label: '販売会社指定での設置', status: 'unavailable' },
+        ],
+        アサヒ: [
+          { label: '三ツ矢・ウィルキンソン等炭酸系', status: 'possible' },
+          { label: 'キャッシュレス対応', status: 'possible' },
+          { label: '販売会社指定での設置', status: 'unavailable' },
+        ],
+        伊藤園: [
+          { label: 'お茶・健康志向ラインアップ', status: 'possible' },
+          { label: 'キャッシュレス対応', status: 'possible' },
+          { label: '販売会社指定での設置', status: 'unavailable' },
+        ],
+      };
+
       const FALLBACK_IMAGE =
         'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="360" height="240" viewBox="0 0 360 240"><rect width="360" height="240" fill="%23f2f4f7"/><rect x="30" y="30" width="300" height="180" rx="12" fill="none" stroke="%23c3cad4" stroke-width="8"/><path d="M96 166l48-58 48 58 48-72 24 32" fill="none" stroke="%23c3cad4" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><circle cx="138" cy="90" r="22" fill="%23d8dde5"/></svg>';
 
@@ -461,7 +544,7 @@
           nameCell.textContent = trimExtension(item.name) || '商品名未設定';
 
           const priceCell = document.createElement('td');
-          priceCell.textContent = item.price ? `¥${item.price}` : '価格未設定';
+          priceCell.textContent = item.price ? `¥${item.price}` : '';
 
           const categoryCell = document.createElement('td');
           categoryCell.textContent = categoryName || 'カテゴリ未設定';
@@ -495,6 +578,95 @@
         `;
       }
 
+      function getMakerFeatures(name) {
+        if (!name) return [];
+        return MANUFACTURER_FEATURES[name] || [];
+      }
+
+      function renderFeatureList(name) {
+        const features = getMakerFeatures(name);
+        if (!features.length) return null;
+
+        const list = document.createElement('ul');
+        list.className = 'feature-list';
+
+        features.forEach((feature) => {
+          const item = document.createElement('li');
+          item.className = 'feature-item';
+
+          const badge = document.createElement('span');
+          badge.className = 'feature-badge ' + (feature.status === 'possible' ? 'possible' : 'unavailable');
+          badge.textContent = feature.status === 'possible' ? '可能' : '不可(販売会社決定)';
+
+          const text = document.createElement('span');
+          text.textContent = feature.label;
+
+          item.appendChild(badge);
+          item.appendChild(text);
+          list.appendChild(item);
+        });
+
+        return list;
+      }
+
+      function setupSelectableCards(grid) {
+        if (!grid) return;
+        const cards = Array.from(grid.querySelectorAll('.card.selectable'));
+        if (!cards.length) return;
+
+        const updateState = (selectedCard) => {
+          cards.forEach((card) => {
+            const isSelected = card === selectedCard;
+            card.classList.toggle('selected', isSelected);
+            card.classList.toggle('dimmed', !isSelected);
+          });
+        };
+
+        cards.forEach((card) => {
+          card.addEventListener('click', () => {
+            updateState(card);
+          });
+        });
+
+        updateState(cards[0]);
+      }
+
+      function renderManufacturerSelection(manufacturers, container) {
+        const list = document.createElement('section');
+        list.className = 'block';
+        list.innerHTML = `
+          <div class="section-header">
+            <div>
+              <p class="eyebrow">質問１</p>
+              <h2>メーカーを選択</h2>
+              <p class="section-lead">画像をクリックして１社を選択してください。</p>
+            </div>
+          </div>
+          <div class="card-grid manufacturer-grid"></div>
+        `;
+
+        const grid = list.querySelector('.manufacturer-grid');
+        manufacturers.forEach((makerInfo) => {
+          const card = document.createElement('article');
+          card.className = 'card manufacturer-card selectable';
+
+          const img = createImageElement(makerInfo.imageUrl, makerInfo.name);
+          const name = document.createElement('h3');
+          name.textContent = makerInfo.name;
+
+          const features = renderFeatureList(makerInfo.name);
+
+          card.appendChild(img);
+          card.appendChild(name);
+          if (features) card.appendChild(features);
+          grid.appendChild(card);
+        });
+
+        container.innerHTML = '';
+        container.appendChild(list);
+        setupSelectableCards(grid);
+      }
+
       function applySurveyHeaders(leadText) {
         document.getElementById('pageTitle').textContent = SURVEY_TITLE;
         document.getElementById('pageLead').textContent = leadText || QUESTION1_DESCRIPTION;
@@ -513,8 +685,15 @@
         const categories = (data && data.categories) || [];
         const manufacturers = (data && data.manufacturers) || [];
 
+        const shouldShowManufacturers = (!maker || maker === 'ラインアップ') && manufacturers.length;
+
         renderControls();
         applySurveyHeaders(`${QUESTION1_DESCRIPTION} ${LINEUP_INSTRUCTION}`);
+
+        if (shouldShowManufacturers) {
+          renderManufacturerSelection(manufacturers, container);
+          return;
+        }
 
         if (categories.length) {
           container.innerHTML = '';
@@ -553,9 +732,9 @@
                 maker.textContent = manufacturer || 'メーカー不明';
                 const price = document.createElement('span');
                 price.className = 'price';
-                price.textContent = item.price ? `¥${item.price}` : '価格未設定';
+                price.textContent = item.price ? `¥${item.price}` : '';
                 meta.appendChild(maker);
-                meta.appendChild(price);
+                if (item.price) meta.appendChild(price);
 
                 const name = document.createElement('h3');
                 name.textContent = itemDisplayName;
@@ -578,41 +757,7 @@
 
         if (manufacturers.length) {
           applySurveyHeaders(`${QUESTION1_DESCRIPTION} ${LINEUP_INSTRUCTION}`);
-
-          const list = document.createElement('section');
-          list.className = 'block';
-          list.innerHTML = `
-            <div class="section-header">
-              <div>
-                <p class="eyebrow">メーカー一覧</p>
-                <h2>メーカー</h2>
-              </div>
-            </div>
-            <div class="card-grid manufacturer-grid"></div>
-          `;
-
-          const grid = list.querySelector('.product-grid');
-          manufacturers.forEach((makerInfo) => {
-            const card = document.createElement('article');
-            card.className = 'card manufacturer-card';
-
-            const img = createImageElement(makerInfo.imageUrl, makerInfo.name);
-            const name = document.createElement('h3');
-            name.textContent = makerInfo.name;
-
-            const anchor = document.createElement('a');
-            anchor.className = 'button secondary';
-            anchor.href = `?maker=${encodeURIComponent(makerInfo.name)}&folderId=${encodeURIComponent(makerInfo.folderId)}`;
-            anchor.textContent = 'ラインアップを表示';
-
-            card.appendChild(img);
-            card.appendChild(name);
-            card.appendChild(anchor);
-            grid.appendChild(card);
-          });
-
-          container.innerHTML = '';
-          container.appendChild(list);
+          renderManufacturerSelection(manufacturers, container);
           return;
         }
 
