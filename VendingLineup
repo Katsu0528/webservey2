@@ -467,29 +467,6 @@
       const QUESTION2_DESCRIPTION =
         'オフィスの自販機に「これは絶対に欲しい！」という飲み物やカテゴリがあれば、自由にご記入ください。';
 
-      const MANUFACTURER_FEATURES = {
-        'コカ・コーラ': [
-          { label: 'ブランド力・赤色デザイン', status: 'possible' },
-          { label: 'マルチキャッシュレス対応', status: 'possible' },
-          { label: '販売会社指定での設置', status: 'unavailable' },
-        ],
-        サントリー: [
-          { label: 'BOSS などコーヒーが豊富', status: 'possible' },
-          { label: '交通系IC・QR 決済', status: 'possible' },
-          { label: '販売会社指定での設置', status: 'unavailable' },
-        ],
-        アサヒ: [
-          { label: '三ツ矢・ウィルキンソン等炭酸系', status: 'possible' },
-          { label: 'キャッシュレス対応', status: 'possible' },
-          { label: '販売会社指定での設置', status: 'unavailable' },
-        ],
-        伊藤園: [
-          { label: 'お茶・健康志向ラインアップ', status: 'possible' },
-          { label: 'キャッシュレス対応', status: 'possible' },
-          { label: '販売会社指定での設置', status: 'unavailable' },
-        ],
-      };
-
       const FALLBACK_IMAGE =
         'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="360" height="240" viewBox="0 0 360 240"><rect width="360" height="240" fill="%23f2f4f7"/><rect x="30" y="30" width="300" height="180" rx="12" fill="none" stroke="%23c3cad4" stroke-width="8"/><path d="M96 166l48-58 48 58 48-72 24 32" fill="none" stroke="%23c3cad4" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><circle cx="138" cy="90" r="22" fill="%23d8dde5"/></svg>';
 
