@@ -403,6 +403,17 @@
         return src;
       }
 
+      function trimExtension(text) {
+        if (typeof text !== 'string') return '';
+
+        const normalized = text.trim();
+        const lastDot = normalized.lastIndexOf('.');
+
+        if (lastDot <= 0) return normalized;
+
+        return normalized.slice(0, lastDot);
+      }
+
       function createImageElement(src, alt) {
         const wrapper = document.createElement('div');
         wrapper.className = 'media-frame';
@@ -445,7 +456,7 @@
         items.forEach((item) => {
           const tr = document.createElement('tr');
           const nameCell = document.createElement('td');
-          nameCell.textContent = item.name || '商品名未設定';
+          nameCell.textContent = trimExtension(item.name) || '商品名未設定';
 
           const priceCell = document.createElement('td');
           priceCell.textContent = item.price ? `¥${item.price}` : '価格未設定';
@@ -473,6 +484,7 @@
       function renderLineup(data) {
         const container = document.getElementById('lineupContainer');
         const manufacturer = (data && data.manufacturer) || maker || '';
+        const displayManufacturer = trimExtension(manufacturer);
         const categories = (data && data.categories) || [];
         const manufacturers = (data && data.manufacturers) || [];
 
@@ -505,7 +517,9 @@
                 const card = document.createElement('article');
                 card.className = 'card product-card';
 
-                const img = createImageElement(item.imageUrl, item.name || '商品画像');
+                const displayItemName = trimExtension(item.name);
+
+                const img = createImageElement(item.imageUrl, displayItemName || '商品画像');
                 const badge = document.createElement('span');
                 badge.className = 'badge';
                 badge.textContent = category.name || 'カテゴリ';
@@ -514,7 +528,7 @@
                 meta.className = 'meta';
                 const maker = document.createElement('span');
                 maker.className = 'maker';
-                maker.textContent = manufacturer || 'メーカー不明';
+                maker.textContent = displayManufacturer || 'メーカー不明';
                 const price = document.createElement('span');
                 price.className = 'price';
                 price.textContent = item.price ? `¥${item.price}` : '価格未設定';
@@ -522,7 +536,7 @@
                 meta.appendChild(price);
 
                 const name = document.createElement('h3');
-                name.textContent = item.name || '商品名';
+                name.textContent = displayItemName || '商品名';
 
                 card.appendChild(img);
                 card.appendChild(badge);
@@ -542,7 +556,8 @@
 
         if (manufacturers.length) {
           document.getElementById('pageTitle').textContent = '自販機メーカー一覧';
-          document.getElementById('pageLead').textContent = 'メーカーを選択して商品ラインアップをご覧ください。';
+          document.getElementById('pageLead').textContent =
+            '現在は自販機メーカーの一覧を表示しています。気になるメーカーを選んで商品ラインアップをチェックしてください。';
 
           const list = document.createElement('section');
           list.className = 'block';
@@ -562,9 +577,11 @@
             const card = document.createElement('article');
             card.className = 'card manufacturer-card';
 
-            const img = createImageElement(makerInfo.imageUrl, makerInfo.name);
+            const displayMakerName = trimExtension(makerInfo.name);
+
+            const img = createImageElement(makerInfo.imageUrl, displayMakerName || makerInfo.name);
             const name = document.createElement('h3');
-            name.textContent = makerInfo.name;
+            name.textContent = displayMakerName || makerInfo.name;
 
             const anchor = document.createElement('a');
             anchor.className = 'button secondary';
