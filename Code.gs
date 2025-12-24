@@ -109,7 +109,7 @@ function extractItems(folder) {
     var file = files.next();
     items.push({
       name: file.getName(),
-      imageUrl: file.getUrl(),
+      imageUrl: getImageUrl(file),
       price: parsePrice(file.getDescription()),
     });
   }
@@ -137,7 +137,20 @@ function getFirstImageUrl(folder) {
   var files = folder.getFiles();
   if (files.hasNext()) {
     var file = files.next();
-    return file.getUrl();
+    return getImageUrl(file);
   }
   return '';
+}
+
+/**
+ * 画像を埋め込み表示用の URL として返す。
+ * Drive のファイルページ URL では直接表示できないため、uc?export=view を利用する。
+ *
+ * @param {GoogleAppsScript.Drive.File} file
+ * @returns {string}
+ */
+function getImageUrl(file) {
+  var id = file && file.getId && file.getId();
+  if (!id) return '';
+  return 'https://drive.google.com/uc?export=view&id=' + id;
 }
