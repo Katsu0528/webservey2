@@ -237,9 +237,15 @@
 
       .image-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 12px;
         margin: 12px 0 4px;
+      }
+
+      @media (min-width: 840px) {
+        .image-grid {
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
       }
 
       .image-grid figcaption {
@@ -521,6 +527,8 @@
               },
             ];
 
+        const displayedManufacturers = tableManufacturers.slice(0, 4);
+
         container.innerHTML = '';
         renderQuestionTwoSection();
         applySurveyHeaders(`${QUESTION1_DESCRIPTION} ${LINEUP_INSTRUCTION}`);
@@ -548,10 +556,10 @@
 
         section.appendChild(sectionHeader);
 
-        if (tableManufacturers.length) {
+        if (displayedManufacturers.length) {
           const imageGrid = document.createElement('div');
           imageGrid.className = 'image-grid';
-          tableManufacturers.forEach((makerEntry) => {
+          displayedManufacturers.forEach((makerEntry) => {
             const figure = document.createElement('figure');
             figure.className = 'image-card';
             figure.tabIndex = 0;
@@ -577,7 +585,7 @@
               .join(' / ')
           : '';
 
-        const manufacturerEntries = tableManufacturers.map((makerEntry) => {
+        const manufacturerEntries = displayedManufacturers.map((makerEntry) => {
           const name = makerEntry.name || 'メーカー未設定';
           const isKirin = /キリン/.test(name);
           const isAsahi = /アサヒ/.test(name);
