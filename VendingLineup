@@ -211,6 +211,16 @@
         align-items: stretch;
       }
 
+      .product-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .product-grid .product-card {
+        flex: 0 0 220px;
+      }
+
       .manufacturer-grid {
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       }
@@ -376,8 +386,6 @@
       const params = new URLSearchParams(window.location.search);
       const maker = params.get('maker') || makerFromTemplate || '';
       const folderId = params.get('folderId') || folderIdFromTemplate || '';
-      const initialQuestion = params.get('question') || '';
-      let currentQuestion = initialQuestion;
 
       function toEmbeddableUrl(src) {
         if (!src) return '';
@@ -583,59 +591,17 @@
         const controls = document.getElementById('controls');
         if (!controls) return;
 
-        const options = manufacturers
-          .map(
-            (makerInfo) =>
-              `<option value="${makerInfo.name}" ${selectedMaker === makerInfo.name ? 'selected' : ''}>${makerInfo.name}</option>`
-          )
-          .join('');
-
         controls.innerHTML = `
-          <form id="makerForm" class="control-form">
-            <div class="control-row">
-              <label>
-                自販機メーカー
-                <select id="makerSelect" name="maker">
-                  <option value="">メーカーを選択してください</option>
-                  ${options}
-                </select>
-              </label>
-              <label>
-                自由記入の質問
-                <textarea id="questionInput" name="question" placeholder="例: どの機種にアイスを追加できますか？"></textarea>
-              </label>
+          <section class="block">
+            <div class="section-header">
+              <div>
+                <p class="eyebrow">自動表示</p>
+                <h2>デフォルトラインアップ</h2>
+                <p class="section-lead">指定のドライブフォルダ内の画像を自動で横並び表示し、画像名も併記しています。</p>
+              </div>
             </div>
-            <div class="control-actions">
-              <button type="submit" class="button">ラインアップを見る</button>
-            </div>
-          </form>
+          </section>
         `;
-
-        const makerSelect = document.getElementById('makerSelect');
-        const questionInput = document.getElementById('questionInput');
-
-        questionInput.value = currentQuestion || '';
-
-        const form = document.getElementById('makerForm');
-        form.addEventListener('submit', function (event) {
-          event.preventDefault();
-          currentQuestion = questionInput.value.trim();
-          const selected = manufacturers.find((makerInfo) => makerInfo.name === makerSelect.value);
-          const selectedFolderId = selected ? selected.folderId : '';
-
-          const search = new URLSearchParams();
-          if (makerSelect.value) search.set('maker', makerSelect.value);
-          if (selectedFolderId) search.set('folderId', selectedFolderId);
-          if (currentQuestion) search.set('question', currentQuestion);
-
-          const newUrl = `${location.pathname}${search.toString() ? '?' + search.toString() : ''}`;
-          window.history.replaceState({}, '', newUrl);
-
-          google.script.run
-            .withSuccessHandler(renderLineup)
-            .withFailureHandler(showError)
-            .getVendingLineup(makerSelect.value, selectedFolderId);
-        });
       }
 
       function showError(err) {
