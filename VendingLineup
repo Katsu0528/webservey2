@@ -236,9 +236,8 @@
       }
 
       .image-grid {
-        display: grid;
-        grid-auto-flow: column;
-        grid-auto-columns: minmax(220px, 1fr);
+        display: flex;
+        flex-wrap: nowrap;
         gap: 12px;
         margin: 12px 0 4px;
         overflow-x: auto;
@@ -595,19 +594,31 @@
           name: entry.name || trimExtension(entry.imageName),
         }));
 
+        const folderBasedManufacturers = allItems.slice(0, MAX_MANUFACTURERS).map((item, index) => ({
+          name: trimExtension(item.name) || `画像${index + 1}`,
+          imageUrl: item.imageUrl || '',
+          imageName: item.name,
+        }));
+
         const fallbackMaker = {
           name: manufacturer || 'メーカー未設定',
           imageUrl: (allItems[0] && allItems[0].imageUrl) || '',
           imageName: (allItems[0] && allItems[0].name) || manufacturer,
         };
 
-        const baseManufacturers = normalizedManufacturers.length ? normalizedManufacturers : [fallbackMaker];
-        const paddedManufacturers = baseManufacturers.slice(0, MAX_MANUFACTURERS);
+        const prioritizedManufacturers =
+          folderBasedManufacturers.length > 0
+            ? folderBasedManufacturers
+            : normalizedManufacturers.length > 0
+            ? normalizedManufacturers
+            : [fallbackMaker];
+
+        const paddedManufacturers = prioritizedManufacturers.slice(0, MAX_MANUFACTURERS);
         while (paddedManufacturers.length < MAX_MANUFACTURERS) {
           paddedManufacturers.push({ name: '未設定', imageUrl: '', imageName: '' });
         }
 
-        const makerListMarkup = baseManufacturers
+        const makerListMarkup = prioritizedManufacturers
           .map((m) => `<span class="maker-pill">${getMakerDisplayName(m)}</span>`)
           .join('');
 
