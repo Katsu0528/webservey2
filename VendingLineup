@@ -248,6 +248,43 @@
         }
       }
 
+      .maker-ribbon {
+        display: flex;
+        gap: 12px;
+        overflow-x: auto;
+        padding: 10px 6px 4px;
+        margin: 10px -4px 6px;
+      }
+
+      .maker-chip {
+        flex: 0 0 160px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        padding: 10px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: #fff;
+        box-shadow: 0 8px 18px rgba(61, 78, 255, 0.07);
+      }
+
+      .maker-chip img {
+        width: 100%;
+        height: 140px;
+        object-fit: contain;
+        border-radius: 10px;
+        background: #f8f9fc;
+        border: 1px solid var(--border);
+        padding: 8px;
+      }
+
+      .maker-chip figcaption {
+        font-weight: 700;
+        color: #2f3345;
+        text-align: center;
+      }
+
       .image-grid figcaption {
         font-size: 13px;
         margin-top: 6px;
@@ -475,6 +512,19 @@
         return wrapper;
       }
 
+      function createThumbnailElement(src, alt) {
+        const img = document.createElement('img');
+        img.loading = 'lazy';
+        img.alt = alt || 'メーカー画像';
+        img.referrerPolicy = 'no-referrer';
+        img.src = toEmbeddableUrl(src) || FALLBACK_IMAGE;
+        img.onerror = () => {
+          img.onerror = null;
+          img.src = FALLBACK_IMAGE;
+        };
+        return img;
+      }
+
       function enableImageSelection(imageGrid) {
         const cards = Array.from(imageGrid.querySelectorAll('.image-card'));
         if (!cards.length) return;
@@ -640,6 +690,19 @@
           manufacturerEntries[0].lineup = lineupSummary;
         }
 
+        const ribbon = document.createElement('div');
+        ribbon.className = 'maker-ribbon';
+        manufacturerEntries.forEach((entry) => {
+          const chip = document.createElement('figure');
+          chip.className = 'maker-chip';
+          chip.appendChild(createThumbnailElement(entry.imageUrl, entry.name));
+          const caption = document.createElement('figcaption');
+          caption.textContent = entry.name;
+          chip.appendChild(caption);
+          ribbon.appendChild(chip);
+        });
+        section.appendChild(ribbon);
+
         const tableWrapper = document.createElement('div');
         tableWrapper.className = 'table-wrapper';
         const table = document.createElement('table');
@@ -648,7 +711,8 @@
         const thead = document.createElement('thead');
         const headerRow = document.createElement('tr');
         const spacer = document.createElement('th');
-        spacer.textContent = '項目';
+        spacer.textContent = '';
+        spacer.setAttribute('aria-hidden', 'true');
         headerRow.appendChild(spacer);
         manufacturerEntries.forEach((entry) => {
           const th = document.createElement('th');
