@@ -133,8 +133,20 @@
 
       .product-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 12px;
+      }
+
+      @media (min-width: 768px) {
+        .product-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+
+      @media (min-width: 1024px) {
+        .product-grid {
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
       }
 
       .manufacturer-grid {
@@ -205,6 +217,38 @@
       .empty {
         color: var(--muted);
       }
+
+      .feature-table-wrapper {
+        margin-top: 12px;
+        overflow-x: auto;
+      }
+
+      .feature-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+
+      .feature-table th,
+      .feature-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border);
+        text-align: left;
+      }
+
+      .feature-table tbody tr:last-child th,
+      .feature-table tbody tr:last-child td {
+        border-bottom: none;
+      }
+
+      .feature-table th {
+        background: #f5f6fb;
+        font-weight: 700;
+      }
     </style>
   </head>
   <body>
@@ -222,11 +266,64 @@
       const makerFromTemplate = <?!= JSON.stringify(maker || '') ?>;
       const folderIdFromTemplate = <?!= JSON.stringify(folderId || '') ?>;
 
+      const FALLBACK_IMAGE =
+        'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="480" height="320" viewBox="0 0 480 320"><rect fill="%23f5f6fb" width="480" height="320"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%2399a1b3" font-size="24" font-family="Inter, sans-serif">No Image</text></svg>';
+
       const params = new URLSearchParams(window.location.search);
       const maker = params.get('maker') || makerFromTemplate || '';
       const folderId = params.get('folderId') || folderIdFromTemplate || '';
       const initialQuestion = params.get('question') || '';
       let currentQuestion = initialQuestion;
+
+      function createImageElement(src, alt) {
+        const img = document.createElement('img');
+        img.src = src || FALLBACK_IMAGE;
+        img.alt = alt || '商品画像';
+        img.loading = 'lazy';
+        img.onerror = () => {
+          img.src = FALLBACK_IMAGE;
+        };
+        return img;
+      }
+
+      function createFeaturesTable(items, categoryName) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'feature-table-wrapper';
+
+        const table = document.createElement('table');
+        table.className = 'feature-table';
+        table.innerHTML = `
+          <thead>
+            <tr>
+              <th>商品名</th>
+              <th>価格</th>
+              <th>カテゴリ</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        `;
+
+        const tbody = table.querySelector('tbody');
+        items.forEach((item) => {
+          const tr = document.createElement('tr');
+          const nameCell = document.createElement('td');
+          nameCell.textContent = item.name || '商品名未設定';
+
+          const priceCell = document.createElement('td');
+          priceCell.textContent = item.price ? `¥${item.price}` : '価格未設定';
+
+          const categoryCell = document.createElement('td');
+          categoryCell.textContent = categoryName || 'カテゴリ未設定';
+
+          tr.appendChild(nameCell);
+          tr.appendChild(priceCell);
+          tr.appendChild(categoryCell);
+          tbody.appendChild(tr);
+        });
+
+        wrapper.appendChild(table);
+        return wrapper;
+      }
 
       document.addEventListener('DOMContentLoaded', function () {
         google.script.run
@@ -266,13 +363,24 @@
               category.items.forEach((item) => {
                 const card = document.createElement('article');
                 card.className = 'product-card';
-                card.innerHTML = `
-                  <img src="${item.imageUrl || ''}" alt="${item.name || '商品画像'}" />
-                  <h3 class="product-name">${item.name || '商品名'}</h3>
-                  <div class="product-price">${item.price ? `¥${item.price}` : '価格未設定'}</div>
-                `;
+
+                const img = createImageElement(item.imageUrl, item.name || '商品画像');
+                const name = document.createElement('h3');
+                name.className = 'product-name';
+                name.textContent = item.name || '商品名';
+
+                const price = document.createElement('div');
+                price.className = 'product-price';
+                price.textContent = item.price ? `¥${item.price}` : '価格未設定';
+
+                card.appendChild(img);
+                card.appendChild(name);
+                card.appendChild(price);
                 grid.appendChild(card);
               });
+
+              const featureTable = createFeaturesTable(category.items, category.name);
+              section.appendChild(featureTable);
             }
 
             container.appendChild(section);
@@ -298,11 +406,20 @@
           manufacturers.forEach((makerInfo) => {
             const card = document.createElement('article');
             card.className = 'product-card manufacturer-card';
-            card.innerHTML = `
-              <img src="${makerInfo.imageUrl || ''}" alt="${makerInfo.name}" />
-              <h3 class="product-name">${makerInfo.name}</h3>
-              <a class="button" href="?maker=${encodeURIComponent(makerInfo.name)}&folderId=${encodeURIComponent(makerInfo.folderId)}">ラインアップを表示</a>
-            `;
+
+            const img = createImageElement(makerInfo.imageUrl, makerInfo.name);
+            const name = document.createElement('h3');
+            name.className = 'product-name';
+            name.textContent = makerInfo.name;
+
+            const anchor = document.createElement('a');
+            anchor.className = 'button';
+            anchor.href = `?maker=${encodeURIComponent(makerInfo.name)}&folderId=${encodeURIComponent(makerInfo.folderId)}`;
+            anchor.textContent = 'ラインアップを表示';
+
+            card.appendChild(img);
+            card.appendChild(name);
+            card.appendChild(anchor);
             grid.appendChild(card);
           });
 
