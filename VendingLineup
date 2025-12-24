@@ -3,14 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>商品ラインアップ</title>
+    <title>オフィス自販機アンケート＆ラインアップ</title>
     <style>
       :root {
-        --bg: #fefefe;
-        --card: #ffffff;
-        --accent: #6c5ce7;
-        --muted: #5f6368;
-        --border: #e6e8f0;
+        --bg: #fef9ff;
+        --panel: #ffffff;
+        --accent: #ff7ac3;
+        --accent-strong: #ff4d9b;
+        --muted: #6b7280;
+        --border: #e5e7eb;
+        --shadow: 0 12px 36px rgba(0, 0, 0, 0.08);
+        --info: #1d4ed8;
+        --neutral: #9ca3af;
       }
 
       * {
@@ -22,16 +26,17 @@
         padding: 0;
         font-family: 'Noto Sans JP', 'Inter', system-ui, -apple-system, BlinkMacSystemFont,
           'Segoe UI', sans-serif;
-        background: linear-gradient(180deg, #f7f7ff 0%, #ffffff 60%);
-        color: #1f1f1f;
+        background: radial-gradient(circle at 10% 20%, #ffecf6 0%, #ffffff 45%),
+          radial-gradient(circle at 90% 10%, #e4f2ff 0%, #ffffff 40%),
+          linear-gradient(180deg, #fff7fb 0%, #ffffff 60%);
+        color: #111827;
+        min-height: 100vh;
       }
 
       header {
-        padding: 20px 24px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
+        padding: 22px 20px 10px;
+        max-width: 1100px;
+        margin: 0 auto;
       }
 
       .title {
@@ -42,38 +47,262 @@
 
       h1 {
         margin: 0;
-        font-size: 1.4rem;
+        font-size: 1.6rem;
+        color: #0f172a;
       }
 
       .lead {
         margin: 0;
         color: var(--muted);
-      }
-
-      .back-link {
-        color: var(--accent);
-        font-weight: 700;
-        text-decoration: none;
-      }
-
-      .back-link:hover,
-      .back-link:focus-visible {
-        text-decoration: underline;
+        font-weight: 600;
       }
 
       main {
         max-width: 1100px;
         margin: 0 auto;
-        padding: 0 20px 32px;
+        padding: 0 20px 40px;
       }
 
-      .category {
-        background: var(--card);
+      .view {
+        display: none;
+      }
+
+      .view.active {
+        display: block;
+      }
+
+      .panel {
+        background: var(--panel);
         border: 1px solid var(--border);
-        border-radius: 14px;
+        border-radius: 18px;
+        padding: 18px;
+        box-shadow: var(--shadow);
+        margin-bottom: 18px;
+      }
+
+      .question-title {
+        margin: 0 0 8px;
+        font-size: 1.1rem;
+        color: #0f172a;
+      }
+
+      .subtitle {
+        margin: 0 0 12px;
+        color: var(--muted);
+      }
+
+      .maker-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 14px;
+      }
+
+      .maker-card {
+        position: relative;
+        border: 2px solid #f3f4f6;
+        border-radius: 16px;
+        overflow: hidden;
+        background: linear-gradient(140deg, #ffffff 0%, #fff3fb 100%);
+        transition: transform 0.15s ease, border 0.15s ease, filter 0.15s ease;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        min-height: 360px;
+      }
+
+      .maker-card:hover,
+      .maker-card:focus-within {
+        transform: translateY(-2px);
+        border-color: rgba(255, 74, 155, 0.35);
+      }
+
+      .maker-card.dimmed {
+        filter: grayscale(0.95) brightness(0.94);
+        opacity: 0.65;
+      }
+
+      .maker-card.selected {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 4px rgba(255, 122, 195, 0.18);
+      }
+
+      .card-media {
+        position: relative;
+        height: 180px;
+        background: #f8fafc;
+      }
+
+      .card-media img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        display: block;
+      }
+
+      .card-body {
+        padding: 14px 14px 12px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .maker-name {
+        margin: 0;
+        font-size: 1.1rem;
+        color: #0f172a;
+      }
+
+      .feature-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .feature-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 10px;
+        background: rgba(59, 130, 246, 0.06);
+        font-size: 0.95rem;
+      }
+
+      .feature-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 60px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 0.85rem;
+        font-weight: 700;
+      }
+
+      .feature-pill.possible {
+        background: rgba(59, 130, 246, 0.12);
+        color: var(--info);
+      }
+
+      .feature-pill.unavailable {
+        background: #f3f4f6;
+        color: var(--neutral);
+      }
+
+      .lineup-link {
+        margin-top: auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--accent-strong);
+        font-weight: 800;
+        text-decoration: none;
+      }
+
+      .lineup-link:hover,
+      .lineup-link:focus-visible {
+        text-decoration: underline;
+      }
+
+      .form-control {
+        width: 100%;
+        padding: 12px 14px;
+        border-radius: 12px;
+        border: 1px solid #d1d5db;
+        background: #fff;
+        font-size: 1rem;
+        resize: vertical;
+        min-height: 120px;
+        transition: border 0.15s ease, box-shadow 0.15s ease;
+      }
+
+      .form-control:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(255, 122, 195, 0.2);
+      }
+
+      .actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .btn {
+        appearance: none;
+        border: none;
+        border-radius: 12px;
+        padding: 12px 18px;
+        font-weight: 800;
+        cursor: pointer;
+        transition: transform 0.1s ease, box-shadow 0.15s ease, filter 0.1s ease;
+        font-size: 1rem;
+      }
+
+      .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .btn-primary {
+        background: linear-gradient(120deg, #ff7ac3, #ff4d9b);
+        color: #fff;
+        box-shadow: 0 12px 20px rgba(255, 122, 195, 0.35);
+      }
+
+      .btn-primary:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 14px 26px rgba(255, 122, 195, 0.42);
+      }
+
+      .btn-ghost {
+        background: #ffffff;
+        border: 1px solid var(--border);
+        color: #0f172a;
+      }
+
+      .error {
+        color: #b91c1c;
+        margin-top: 6px;
+        font-weight: 700;
+      }
+
+      .success {
+        color: #059669;
+        margin-top: 6px;
+        font-weight: 700;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(17, 24, 39, 0.06);
+        color: #111827;
+        font-weight: 700;
+        font-size: 0.9rem;
+      }
+
+      .empty {
+        color: var(--muted);
+        padding: 12px 0;
+      }
+
+      /* lineup */
+      .category {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 16px;
         padding: 16px;
         margin-bottom: 18px;
-        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.05);
+        box-shadow: var(--shadow);
       }
 
       .category-header {
@@ -87,6 +316,15 @@
       .category-header h2 {
         margin: 0;
         font-size: 1.1rem;
+      }
+
+      .badge {
+        background: rgba(37, 99, 235, 0.12);
+        color: #1d4ed8;
+        font-weight: 800;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 0.9rem;
       }
 
       .product-grid {
@@ -124,84 +362,367 @@
         font-weight: 800;
       }
 
-      .empty {
-        color: var(--muted);
+      .back-link {
+        color: var(--accent-strong);
+        font-weight: 800;
+        text-decoration: none;
+      }
+
+      .back-link:hover,
+      .back-link:focus-visible {
+        text-decoration: underline;
       }
     </style>
   </head>
   <body>
     <header>
       <div class="title">
-        <h1 id="pageTitle">商品ラインアップ</h1>
-        <p id="pageLead" class="lead">メーカー別に商品と価格をまとめています。</p>
+        <h1 id="pageTitle">オフィス自販機アンケート</h1>
+        <p id="pageLead" class="lead">設置する自販機メーカーを一緒に決めましょう！</p>
       </div>
-      <a id="backLink" class="back-link" href="?view=vending-survey" target="_top">← アンケートに戻る</a>
+      <a id="backLink" class="back-link" href="?view=vending-survey" target="_top"></a>
     </header>
 
-    <main id="lineupContainer"></main>
+    <main>
+      <section id="surveyView" class="view active" aria-label="自販機アンケート">
+        <div class="panel">
+          <p class="pill">Q1. 自販機メーカーを選択してください</p>
+          <p class="subtitle">画像をタップして選択します。選択したメーカーは枠で強調表示され、他はグレーになります。</p>
+          <div id="makerGrid" class="maker-grid" role="list"></div>
+          <div id="makerError" class="error" aria-live="polite"></div>
+        </div>
 
-    <script>
+        <div class="panel">
+          <p class="pill">Q2. 飲みたいもの・商品の要望</p>
+          <p class="subtitle">具体的な商品名やカテゴリ、温かい/冷たい飲み物など自由に教えてください。</p>
+          <textarea
+            id="requestInput"
+            class="form-control"
+            placeholder="例）無糖の炭酸水、季節限定のフレーバーがほしい"
+            aria-label="飲みたいものや要望"
+          ></textarea>
+          <div class="actions">
+            <button id="resetButton" class="btn btn-ghost" type="button">リセット</button>
+            <button id="submitButton" class="btn btn-primary" type="button">送信する</button>
+          </div>
+          <div id="surveyMessage" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section id="lineupView" class="view" aria-label="商品ラインアップ">
+        <div class="panel" style="margin-bottom: 14px;">
+          <a id="returnLink" class="back-link" href="?view=vending-survey" target="_top">← アンケートに戻る</a>
+        </div>
+        <div id="lineupContainer"></div>
+      </section>
+    </main>
+
+    <script type="module">
       const params = new URLSearchParams(window.location.search);
-      const maker = params.get('maker') || '';
-      const folderId = params.get('folderId') || '';
+      const currentView = params.get('view') || 'vending-survey';
 
-      document.addEventListener('DOMContentLoaded', function () {
-        google.script.run
-          .withSuccessHandler(renderLineup)
-          .withFailureHandler(showError)
-          .getVendingLineup(maker, folderId);
-      });
+      const DOM = {
+        makerGrid: document.getElementById('makerGrid'),
+        surveyView: document.getElementById('surveyView'),
+        lineupView: document.getElementById('lineupView'),
+        surveyMessage: document.getElementById('surveyMessage'),
+        makerError: document.getElementById('makerError'),
+        requestInput: document.getElementById('requestInput'),
+        submitButton: document.getElementById('submitButton'),
+        resetButton: document.getElementById('resetButton'),
+        backLink: document.getElementById('backLink'),
+        pageTitle: document.getElementById('pageTitle'),
+        pageLead: document.getElementById('pageLead'),
+        lineupContainer: document.getElementById('lineupContainer'),
+      };
 
-      function renderLineup(data) {
-        const container = document.getElementById('lineupContainer');
-        const manufacturer = (data && data.manufacturer) || maker || 'ラインアップ';
-        document.getElementById('pageTitle').textContent = `${manufacturer} の商品ラインアップ`;
-        document.getElementById('pageLead').textContent = 'カテゴリーごとに商品画像と価格をまとめました。';
+      const AppState = {
+        selectedMaker: null,
+        userEmail: '',
+      };
 
-        const categories = (data && data.categories) || [];
-        if (!categories.length) {
-          container.innerHTML = '<p class="empty">表示できる商品情報がありません。</p>';
-          return;
-        }
+      const ViewController = {
+        toggle(view) {
+          const isSurvey = view === 'vending-survey';
+          DOM.surveyView.classList.toggle('active', isSurvey);
+          DOM.lineupView.classList.toggle('active', !isSurvey);
+          DOM.backLink.textContent = isSurvey ? '' : '← アンケートに戻る';
+          DOM.backLink.style.display = isSurvey ? 'none' : 'inline-flex';
+        },
+      };
 
-        container.innerHTML = '';
-        categories.forEach((category) => {
-          const section = document.createElement('section');
-          section.className = 'category';
-          section.innerHTML = `
-            <div class="category-header">
-              <h2>${category.name || 'カテゴリー'}</h2>
-              <span class="lead">${(category.items || []).length} 件</span>
+      const Helpers = {
+        buildImageUrl(id) {
+          if (!id) return '';
+          return `https://lh3.googleusercontent.com/d/${id}`;
+        },
+        stripExtension(name) {
+          return (name || '').replace(/\.[^.]+$/, '');
+        },
+      };
+
+      const SurveyPage = (() => {
+        function renderCard(maker) {
+          const card = document.createElement('article');
+          card.className = 'maker-card';
+          card.tabIndex = 0;
+          card.dataset.maker = maker.name || '';
+          card.dataset.folderId = maker.folderId || '';
+          card.dataset.lineupFolderId = maker.lineupFolderId || '';
+          card.dataset.imageId = maker.imageId || '';
+
+          card.innerHTML = `
+            <div class="card-media">
+              <img src="${maker.imageUrl || Helpers.buildImageUrl(maker.imageId)}" alt="${
+            maker.name || '自販機メーカー'
+          }" loading="lazy" />
             </div>
-            <div class="product-grid"></div>
+            <div class="card-body">
+              <h3 class="maker-name">${maker.name || 'メーカー名'}</h3>
+              <ul class="feature-list">
+                ${(maker.features || [])
+                  .map((feature) => {
+                    const unavailable = (feature.status || '').includes('不可');
+                    return `
+                      <li class="feature-item">
+                        <span class="feature-pill ${unavailable ? 'unavailable' : 'possible'}">${
+                      feature.status || ''
+                    }</span>
+                        <span>${feature.label || ''}</span>
+                      </li>
+                    `;
+                  })
+                  .join('')}
+              </ul>
+              <a class="lineup-link" href="${
+                maker.lineupUrl || `?view=lineup&maker=${encodeURIComponent(maker.name || '')}&folderId=${
+                    maker.lineupFolderId || maker.folderId || ''
+                  }`
+              }" target="_top">商品ラインアップを見る →</a>
+            </div>
           `;
 
-          const grid = section.querySelector('.product-grid');
-          if (!category.items || !category.items.length) {
-            grid.innerHTML = '<p class="empty">商品が見つかりませんでした。</p>';
-          } else {
-            category.items.forEach((item) => {
-              const card = document.createElement('article');
-              card.className = 'product-card';
-              card.innerHTML = `
-                <img src="${item.imageUrl || ''}" alt="${item.name || '商品画像'}" />
-                <h3 class="product-name">${item.name || '商品名'}</h3>
-                <div class="product-price">${item.price ? `¥${item.price}` : '価格未設定'}</div>
-              `;
-              grid.appendChild(card);
-            });
+          card.addEventListener('click', () => handleSelect(card, maker));
+          card.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handleSelect(card, maker);
+            }
+          });
+
+          return card;
+        }
+
+        function handleSelect(card, maker) {
+          AppState.selectedMaker = maker;
+          Array.from(document.querySelectorAll('.maker-card')).forEach((node) => {
+            const isSelected = node === card;
+            node.classList.toggle('selected', isSelected);
+            node.classList.toggle('dimmed', !isSelected);
+          });
+          DOM.makerError.textContent = '';
+          DOM.surveyMessage.textContent = '';
+        }
+
+        function render(list) {
+          DOM.makerGrid.innerHTML = '';
+          if (!list || !list.length) {
+            DOM.makerGrid.innerHTML = '<p class="empty">表示できるメーカー情報がありません。</p>';
+            return;
           }
 
-          container.appendChild(section);
-        });
+          list.forEach((maker) => {
+            const card = renderCard(maker);
+            DOM.makerGrid.appendChild(card);
+          });
+        }
+
+        function showError(err) {
+          DOM.makerGrid.innerHTML = `<p class="error">メーカー情報の取得に失敗しました。${
+            err && err.message ? ` (詳細: ${err.message})` : ''
+          }</p>`;
+        }
+
+        function fetchEmail() {
+          if (google?.script?.run?.getCurrentUserEmail) {
+            google.script.run.withSuccessHandler((email) => {
+              AppState.userEmail = email || '';
+            }).getCurrentUserEmail();
+          }
+        }
+
+        function load() {
+          ViewController.toggle('vending-survey');
+          DOM.pageTitle.textContent = 'オフィス自販機アンケート';
+          DOM.pageLead.textContent = '設置したい自販機メーカーと商品要望を教えてください。';
+          DOM.backLink.href = '?view=vending-survey';
+
+          if (google?.script?.run?.getVendingManufacturers) {
+            google.script.run.withSuccessHandler(render).withFailureHandler(showError).getVendingManufacturers();
+            fetchEmail();
+          } else {
+            // Preview fallback
+            render([
+              {
+                name: 'メーカーA',
+                imageId: '',
+                features: [
+                  { status: '可能', label: '小型機ラインアップあり' },
+                  { status: '不可(販売会社決定)', label: 'オフィスサポート不可' },
+                ],
+              },
+            ]);
+          }
+        }
+
+        function handleSubmit() {
+          if (!AppState.selectedMaker) {
+            DOM.makerError.textContent = 'メーカーを1つ選択してください。';
+            return;
+          }
+
+          DOM.submitButton.disabled = true;
+          DOM.surveyMessage.textContent = '';
+          DOM.makerError.textContent = '';
+
+          const payload = {
+            email: AppState.userEmail,
+            manufacturer: AppState.selectedMaker.name || '',
+            request: DOM.requestInput.value.trim(),
+          };
+
+          if (google?.script?.run?.submitVendingSurvey) {
+            google.script.run
+              .withSuccessHandler(() => {
+                DOM.surveyMessage.className = 'success';
+                DOM.surveyMessage.textContent = '回答を送信しました。ご協力ありがとうございます！';
+                DOM.submitButton.disabled = false;
+              })
+              .withFailureHandler((err) => {
+                DOM.surveyMessage.className = 'error';
+                DOM.surveyMessage.textContent = `送信に失敗しました。${err && err.message ? err.message : ''}`;
+                DOM.submitButton.disabled = false;
+              })
+              .submitVendingSurvey(payload);
+          } else {
+            DOM.surveyMessage.className = 'success';
+            DOM.surveyMessage.textContent = 'プレビュー環境では送信できませんが、選択内容は以下です。';
+            console.log(payload);
+            DOM.submitButton.disabled = false;
+          }
+        }
+
+        function handleReset() {
+          AppState.selectedMaker = null;
+          DOM.makerGrid.querySelectorAll('.maker-card').forEach((node) => {
+            node.classList.remove('selected', 'dimmed');
+          });
+          DOM.makerError.textContent = '';
+          DOM.surveyMessage.textContent = '';
+          DOM.requestInput.value = '';
+        }
+
+        function bind() {
+          DOM.submitButton.addEventListener('click', handleSubmit);
+          DOM.resetButton.addEventListener('click', handleReset);
+        }
+
+        return {
+          load,
+          bind,
+        };
+      })();
+
+      const LineupPage = (() => {
+        function render(data) {
+          const manufacturer = (data && data.manufacturer) || params.get('maker') || 'ラインアップ';
+          DOM.pageTitle.textContent = `${manufacturer} の商品ラインアップ`;
+          DOM.pageLead.textContent = '商品画像と価格をカテゴリーごとにまとめています。';
+          DOM.backLink.href = '?view=vending-survey';
+          DOM.backLink.textContent = '← アンケートに戻る';
+          DOM.backLink.style.display = 'inline-flex';
+
+          const categories = (data && data.categories) || [];
+          if (!categories.length) {
+            DOM.lineupContainer.innerHTML = '<p class="empty">表示できる商品情報がありません。</p>';
+            return;
+          }
+
+          DOM.lineupContainer.innerHTML = '';
+          categories.forEach((category) => {
+            const section = document.createElement('section');
+            section.className = 'category';
+            section.innerHTML = `
+              <div class="category-header">
+                <h2>${category.name || 'カテゴリー'}</h2>
+                <span class="badge">${(category.items || []).length} 件</span>
+              </div>
+              <div class="product-grid"></div>
+            `;
+
+            const grid = section.querySelector('.product-grid');
+            if (!category.items || !category.items.length) {
+              grid.innerHTML = '<p class="empty">商品が見つかりませんでした。</p>';
+            } else {
+              category.items.forEach((item) => {
+                const card = document.createElement('article');
+                card.className = 'product-card';
+                card.innerHTML = `
+                  <img src="${item.imageUrl || Helpers.buildImageUrl(item.imageId)}" alt="${
+                  item.name || '商品画像'
+                }" />
+                  <h3 class="product-name">${Helpers.stripExtension(item.name) || '商品名'}</h3>
+                  <div class="product-price">${item.price ? `¥${item.price}` : '価格未設定'}</div>
+                `;
+                grid.appendChild(card);
+              });
+            }
+
+            DOM.lineupContainer.appendChild(section);
+          });
+        }
+
+        function showError(err) {
+          DOM.lineupContainer.innerHTML = `<p class="empty">商品情報の取得に失敗しました。${
+            err && err.message ? ` (詳細: ${err.message})` : ''
+          }</p>`;
+        }
+
+        function load() {
+          ViewController.toggle('lineup');
+          const maker = params.get('maker') || '';
+          const folderId = params.get('folderId') || '';
+          if (google?.script?.run?.getVendingLineup) {
+            google.script.run.withSuccessHandler(render).withFailureHandler(showError).getVendingLineup(maker, folderId);
+          } else {
+            render({
+              manufacturer: maker,
+              categories: [
+                {
+                  name: 'コーヒー',
+                  items: [
+                    { name: 'ブレンド', price: '130', imageId: '' },
+                    { name: 'ラテ', price: '150', imageId: '' },
+                  ],
+                },
+              ],
+            });
+          }
+        }
+
+        return { load };
+      })();
+
+      function init() {
+        SurveyPage.bind();
+        if (currentView === 'lineup') {
+          LineupPage.load();
+        } else {
+          SurveyPage.load();
+        }
       }
 
-      function showError(err) {
-        const container = document.getElementById('lineupContainer');
-        container.innerHTML = `<p class="empty">商品情報の取得に失敗しました。${
-          err && err.message ? ` (詳細: ${err.message})` : ''
-        }</p>`;
-      }
+      init();
     </script>
   </body>
 </html>
