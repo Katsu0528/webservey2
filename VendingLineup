@@ -89,19 +89,13 @@
         border-color: #ffd7eb;
       }
 
-      section.block,
-      .controls {
+      section.block {
         background: #fff;
         border: 1px solid var(--border);
         border-radius: 16px;
         padding: 18px 16px 20px;
         margin-top: 16px;
         box-shadow: var(--shadow);
-      }
-
-      .controls form {
-        display: grid;
-        gap: 12px;
       }
 
       #lineupContainer {
@@ -452,7 +446,6 @@
         <p id="pageLead" class="lead"></p>
       </header>
 
-      <section id="controls" class="controls"></section>
       <section id="lineupContainer"></section>
       <section id="question2Section"></section>
     </div>
@@ -558,9 +551,10 @@
         return wrapper;
       }
 
-      function renderControls() {
-        const controls = document.getElementById('controls');
-        controls.innerHTML = `
+      function renderQuestionOneIntro(container) {
+        const section = document.createElement('section');
+        section.className = 'block';
+        section.innerHTML = `
           <div class="control-row">
             <div>
               <p class="eyebrow">質問１</p>
@@ -570,6 +564,7 @@
             </div>
           </div>
         `;
+        container.appendChild(section);
       }
 
       function renderQuestionTwoSection() {
@@ -649,7 +644,6 @@
         list.innerHTML = `
           <div class="section-header">
             <div>
-              <p class="eyebrow">質問１</p>
               <h2>メーカーを選択</h2>
               <p class="section-lead">画像をクリックして１社を選択してください。</p>
             </div>
@@ -674,7 +668,6 @@
           grid.appendChild(card);
         });
 
-        container.innerHTML = '';
         container.appendChild(list);
         setupSelectableCards(grid);
       }
@@ -699,7 +692,8 @@
 
         const shouldShowManufacturers = (!maker || maker === 'ラインアップ') && manufacturers.length;
 
-        renderControls();
+        container.innerHTML = '';
+        renderQuestionOneIntro(container);
         renderQuestionTwoSection();
         applySurveyHeaders(`${QUESTION1_DESCRIPTION} ${LINEUP_INSTRUCTION}`);
 
@@ -709,7 +703,6 @@
         }
 
         if (categories.length) {
-          container.innerHTML = '';
           categories.forEach((category) => {
             const section = document.createElement('section');
             section.className = 'block';
