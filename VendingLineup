@@ -40,6 +40,59 @@
         gap: 6px;
       }
 
+      .controls {
+        margin: 0 24px 8px;
+        padding: 16px;
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        box-shadow: 0 12px 30px rgba(31, 41, 55, 0.08);
+      }
+
+      .control-form {
+        display: grid;
+        gap: 12px;
+      }
+
+      .control-row {
+        display: grid;
+        gap: 12px;
+      }
+
+      @media (min-width: 768px) {
+        .control-row {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+
+      label {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        font-weight: 600;
+      }
+
+      select,
+      textarea {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px 12px;
+        font-size: 14px;
+        font-family: inherit;
+        background: #f9fafb;
+      }
+
+      textarea {
+        min-height: 96px;
+        resize: vertical;
+      }
+
+      .control-actions {
+        display: flex;
+        justify-content: flex-end;
+      }
+
       h1 {
         margin: 0;
         font-size: 1.4rem;
@@ -135,10 +188,18 @@
         text-decoration: none;
         text-align: center;
         transition: transform 0.12s ease;
+        border: none;
+        cursor: pointer;
       }
 
       .button:hover {
         transform: translateY(-1px);
+      }
+
+      .button.secondary {
+        background: #fff;
+        color: var(--accent);
+        border: 1px solid var(--accent);
       }
 
       .empty {
@@ -154,6 +215,7 @@
       </div>
     </header>
 
+    <section id="controls" class="controls"></section>
     <main id="lineupContainer"></main>
 
     <script>
@@ -163,6 +225,8 @@
       const params = new URLSearchParams(window.location.search);
       const maker = params.get('maker') || makerFromTemplate || '';
       const folderId = params.get('folderId') || folderIdFromTemplate || '';
+      const initialQuestion = params.get('question') || '';
+      let currentQuestion = initialQuestion;
 
       document.addEventListener('DOMContentLoaded', function () {
         google.script.run
@@ -176,6 +240,8 @@
         const manufacturer = (data && data.manufacturer) || maker || '';
         const categories = (data && data.categories) || [];
         const manufacturers = (data && data.manufacturers) || [];
+
+        renderControls(manufacturers, manufacturer);
 
         if (categories.length) {
           document.getElementById('pageTitle').textContent = `${manufacturer || 'ラインアップ'} の商品ラインアップ`;
@@ -247,6 +313,65 @@
 
         container.innerHTML =
           '<p class="empty">現在表示できる商品情報がありません。商品の準備が整い次第、こちらに表示されます。</p>';
+      }
+
+      function renderControls(manufacturers, selectedMaker) {
+        const controls = document.getElementById('controls');
+        if (!controls) return;
+
+        const options = manufacturers
+          .map(
+            (makerInfo) =>
+              `<option value="${makerInfo.name}" ${selectedMaker === makerInfo.name ? 'selected' : ''}>${makerInfo.name}</option>`
+          )
+          .join('');
+
+        controls.innerHTML = `
+          <form id="makerForm" class="control-form">
+            <div class="control-row">
+              <label>
+                自販機メーカー
+                <select id="makerSelect" name="maker">
+                  <option value="">メーカーを選択してください</option>
+                  ${options}
+                </select>
+              </label>
+              <label>
+                自由記入の質問
+                <textarea id="questionInput" name="question" placeholder="例: どの機種にアイスを追加できますか？"></textarea>
+              </label>
+            </div>
+            <div class="control-actions">
+              <button type="submit" class="button">ラインアップを見る</button>
+            </div>
+          </form>
+        `;
+
+        const makerSelect = document.getElementById('makerSelect');
+        const questionInput = document.getElementById('questionInput');
+
+        questionInput.value = currentQuestion || '';
+
+        const form = document.getElementById('makerForm');
+        form.addEventListener('submit', function (event) {
+          event.preventDefault();
+          currentQuestion = questionInput.value.trim();
+          const selected = manufacturers.find((makerInfo) => makerInfo.name === makerSelect.value);
+          const selectedFolderId = selected ? selected.folderId : '';
+
+          const search = new URLSearchParams();
+          if (makerSelect.value) search.set('maker', makerSelect.value);
+          if (selectedFolderId) search.set('folderId', selectedFolderId);
+          if (currentQuestion) search.set('question', currentQuestion);
+
+          const newUrl = `${location.pathname}${search.toString() ? '?' + search.toString() : ''}`;
+          window.history.replaceState({}, '', newUrl);
+
+          google.script.run
+            .withSuccessHandler(renderLineup)
+            .withFailureHandler(showError)
+            .getVendingLineup(makerSelect.value, selectedFolderId);
+        });
       }
 
       function showError(err) {

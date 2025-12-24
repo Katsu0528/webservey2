@@ -35,11 +35,10 @@ function getVendingLineup(maker, folderId) {
   var result = {
     manufacturer: maker || 'ラインアップ',
     categories: [],
-    manufacturers: [],
+    manufacturers: getManufacturers(),
   };
 
   if (!folderId) {
-    result.manufacturers = getManufacturers();
     return result;
   }
 
