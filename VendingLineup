@@ -331,6 +331,23 @@
         font-weight: 700;
       }
 
+      .maker-header {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .maker-header img {
+        width: 80px;
+        height: 80px;
+        object-fit: contain;
+        border-radius: 10px;
+        background: #fff;
+        border: 1px solid var(--border);
+        padding: 6px;
+      }
+
       table.lineup-table th:first-child,
       table.lineup-table td:first-child {
         text-align: left;
@@ -593,6 +610,7 @@
 
           return {
             name,
+            imageUrl: makerEntry.imageUrl || '',
             customStatus: {
               text: isKirin ? '可能' : '不可(販売会社決定)',
               className: isKirin ? 'status-allow' : 'status-deny',
@@ -614,11 +632,14 @@
         const thead = document.createElement('thead');
         const headerRow = document.createElement('tr');
         const spacer = document.createElement('th');
-        spacer.textContent = '';
+        spacer.textContent = '項目';
         headerRow.appendChild(spacer);
         manufacturerEntries.forEach((entry) => {
           const th = document.createElement('th');
-          th.textContent = entry.name;
+          const imageMarkup = entry.imageUrl
+            ? `<img src="${toEmbeddableUrl(entry.imageUrl)}" alt="${entry.name} の代表画像" loading="lazy" referrerpolicy="no-referrer" />`
+            : '';
+          th.innerHTML = `<div class="maker-header">${imageMarkup}<span>${entry.name}</span></div>`;
           headerRow.appendChild(th);
         });
         thead.appendChild(headerRow);
