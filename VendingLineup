@@ -395,7 +395,12 @@
         <div class="panel">
           <p class="pill">Q2. 飲みたいもの・商品の要望</p>
           <p class="subtitle">具体的な商品名やカテゴリ、温かい/冷たい飲み物など自由に教えてください。</p>
-          <textarea id="requestInput" class="form-control" placeholder="例）無糖の炭酸水、季節限定のフレーバーがほしい" aria-label="飲みたいものや要望"></textarea>
+          <textarea
+            id="requestInput"
+            class="form-control"
+            placeholder="例）無糖の炭酸水、季節限定のフレーバーがほしい"
+            aria-label="飲みたいものや要望"
+          ></textarea>
           <div class="actions">
             <button id="resetButton" class="btn btn-ghost" type="button">リセット</button>
             <button id="submitButton" class="btn btn-primary" type="button">送信する</button>
@@ -412,256 +417,312 @@
       </section>
     </main>
 
-    <script>
+    <script type="module">
       const params = new URLSearchParams(window.location.search);
       const currentView = params.get('view') || 'vending-survey';
-      const makerGrid = document.getElementById('makerGrid');
-      const surveyView = document.getElementById('surveyView');
-      const lineupView = document.getElementById('lineupView');
-      const surveyMessage = document.getElementById('surveyMessage');
-      const makerError = document.getElementById('makerError');
-      const requestInput = document.getElementById('requestInput');
-      const submitButton = document.getElementById('submitButton');
-      const resetButton = document.getElementById('resetButton');
-      const backLink = document.getElementById('backLink');
-      const pageTitle = document.getElementById('pageTitle');
-      const pageLead = document.getElementById('pageLead');
-      const lineupContainer = document.getElementById('lineupContainer');
 
-      let selectedMaker = null;
-      let userEmail = '';
+      const DOM = {
+        makerGrid: document.getElementById('makerGrid'),
+        surveyView: document.getElementById('surveyView'),
+        lineupView: document.getElementById('lineupView'),
+        surveyMessage: document.getElementById('surveyMessage'),
+        makerError: document.getElementById('makerError'),
+        requestInput: document.getElementById('requestInput'),
+        submitButton: document.getElementById('submitButton'),
+        resetButton: document.getElementById('resetButton'),
+        backLink: document.getElementById('backLink'),
+        pageTitle: document.getElementById('pageTitle'),
+        pageLead: document.getElementById('pageLead'),
+        lineupContainer: document.getElementById('lineupContainer'),
+      };
 
-      function toggleView(view) {
-        const isSurvey = view === 'vending-survey';
-        surveyView.classList.toggle('active', isSurvey);
-        lineupView.classList.toggle('active', !isSurvey);
-        backLink.textContent = isSurvey ? '' : '← アンケートに戻る';
-        backLink.style.display = isSurvey ? 'none' : 'inline-flex';
-      }
+      const AppState = {
+        selectedMaker: null,
+        userEmail: '',
+      };
 
-      function buildImageUrl(id) {
-        if (!id) return '';
-        return `https://lh3.googleusercontent.com/d/${id}`;
-      }
+      const ViewController = {
+        toggle(view) {
+          const isSurvey = view === 'vending-survey';
+          DOM.surveyView.classList.toggle('active', isSurvey);
+          DOM.lineupView.classList.toggle('active', !isSurvey);
+          DOM.backLink.textContent = isSurvey ? '' : '← アンケートに戻る';
+          DOM.backLink.style.display = isSurvey ? 'none' : 'inline-flex';
+        },
+      };
 
-      function renderMakerCard(maker) {
-        const card = document.createElement('article');
-        card.className = 'maker-card';
-        card.tabIndex = 0;
-        card.dataset.maker = maker.name || '';
-        card.dataset.folderId = maker.folderId || '';
-        card.dataset.lineupFolderId = maker.lineupFolderId || '';
-        card.dataset.imageId = maker.imageId || '';
+      const Helpers = {
+        buildImageUrl(id) {
+          if (!id) return '';
+          return `https://lh3.googleusercontent.com/d/${id}`;
+        },
+        stripExtension(name) {
+          return (name || '').replace(/\.[^.]+$/, '');
+        },
+      };
 
-        card.innerHTML = `
-          <div class="card-media">
-            <img src="${maker.imageUrl || buildImageUrl(maker.imageId)}" alt="${
-          maker.name || '自販機メーカー'
-        }" loading="lazy" />
-          </div>
-          <div class="card-body">
-            <h3 class="maker-name">${maker.name || 'メーカー名'}</h3>
-            <ul class="feature-list">
-              ${(maker.features || [])
-                .map((feature) => {
-                  const unavailable = (feature.status || '').includes('不可');
-                  return `
-                    <li class="feature-item">
-                      <span class="feature-pill ${unavailable ? 'unavailable' : 'possible'}">${
-                    feature.status || ''
-                  }</span>
-                      <span>${feature.label || ''}</span>
-                    </li>
-                  `;
-                })
-                .join('')}
-            </ul>
-            <a class="lineup-link" href="${
-              maker.lineupUrl || `?view=lineup&maker=${encodeURIComponent(maker.name || '')}&folderId=${
-                maker.lineupFolderId || maker.folderId || ''
-              }`
-            }" target="_top">商品ラインアップを見る →</a>
-          </div>
-        `;
+      const SurveyPage = (() => {
+        function renderCard(maker) {
+          const card = document.createElement('article');
+          card.className = 'maker-card';
+          card.tabIndex = 0;
+          card.dataset.maker = maker.name || '';
+          card.dataset.folderId = maker.folderId || '';
+          card.dataset.lineupFolderId = maker.lineupFolderId || '';
+          card.dataset.imageId = maker.imageId || '';
 
-        card.addEventListener('click', () => selectMaker(card, maker));
-        card.addEventListener('keypress', (e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            selectMaker(card, maker);
-          }
-        });
+          card.innerHTML = `
+            <div class="card-media">
+              <img src="${maker.imageUrl || Helpers.buildImageUrl(maker.imageId)}" alt="${
+            maker.name || '自販機メーカー'
+          }" loading="lazy" />
+            </div>
+            <div class="card-body">
+              <h3 class="maker-name">${maker.name || 'メーカー名'}</h3>
+              <ul class="feature-list">
+                ${(maker.features || [])
+                  .map((feature) => {
+                    const unavailable = (feature.status || '').includes('不可');
+                    return `
+                      <li class="feature-item">
+                        <span class="feature-pill ${unavailable ? 'unavailable' : 'possible'}">${
+                      feature.status || ''
+                    }</span>
+                        <span>${feature.label || ''}</span>
+                      </li>
+                    `;
+                  })
+                  .join('')}
+              </ul>
+              <a class="lineup-link" href="${
+                maker.lineupUrl || `?view=lineup&maker=${encodeURIComponent(maker.name || '')}&folderId=${
+                    maker.lineupFolderId || maker.folderId || ''
+                  }`
+              }" target="_top">商品ラインアップを見る →</a>
+            </div>
+          `;
 
-        return card;
-      }
+          card.addEventListener('click', () => handleSelect(card, maker));
+          card.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handleSelect(card, maker);
+            }
+          });
 
-      function selectMaker(card, maker) {
-        selectedMaker = maker;
-        Array.from(document.querySelectorAll('.maker-card')).forEach((node) => {
-          const isSelected = node === card;
-          node.classList.toggle('selected', isSelected);
-          node.classList.toggle('dimmed', !isSelected);
-        });
-        makerError.textContent = '';
-        surveyMessage.textContent = '';
-      }
-
-      function renderSurvey(list) {
-        makerGrid.innerHTML = '';
-        if (!list || !list.length) {
-          makerGrid.innerHTML = '<p class="empty">表示できるメーカー情報がありません。</p>';
-          return;
+          return card;
         }
 
-        list.forEach((maker) => {
-          const card = renderMakerCard(maker);
-          makerGrid.appendChild(card);
-        });
-      }
+        function handleSelect(card, maker) {
+          AppState.selectedMaker = maker;
+          Array.from(document.querySelectorAll('.maker-card')).forEach((node) => {
+            const isSelected = node === card;
+            node.classList.toggle('selected', isSelected);
+            node.classList.toggle('dimmed', !isSelected);
+          });
+          DOM.makerError.textContent = '';
+          DOM.surveyMessage.textContent = '';
+        }
 
-      function loadSurvey() {
-        toggleView('vending-survey');
-        pageTitle.textContent = 'オフィス自販機アンケート';
-        pageLead.textContent = '設置したい自販機メーカーと商品要望を教えてください。';
-        backLink.href = '?view=vending-survey';
+        function render(list) {
+          DOM.makerGrid.innerHTML = '';
+          if (!list || !list.length) {
+            DOM.makerGrid.innerHTML = '<p class="empty">表示できるメーカー情報がありません。</p>';
+            return;
+          }
 
-        if (google?.script?.run) {
-          google.script.run.withSuccessHandler(renderSurvey).withFailureHandler(showSurveyError).getVendingManufacturers();
-          if (google.script.run.getCurrentUserEmail) {
+          list.forEach((maker) => {
+            const card = renderCard(maker);
+            DOM.makerGrid.appendChild(card);
+          });
+        }
+
+        function showError(err) {
+          DOM.makerGrid.innerHTML = `<p class="error">メーカー情報の取得に失敗しました。${
+            err && err.message ? ` (詳細: ${err.message})` : ''
+          }</p>`;
+        }
+
+        function fetchEmail() {
+          if (google?.script?.run?.getCurrentUserEmail) {
             google.script.run.withSuccessHandler((email) => {
-              userEmail = email || '';
+              AppState.userEmail = email || '';
             }).getCurrentUserEmail();
           }
         }
-      }
 
-      function showSurveyError(err) {
-        makerGrid.innerHTML = `<p class="error">メーカー情報の取得に失敗しました。${
-          err && err.message ? ` (詳細: ${err.message})` : ''
-        }</p>`;
-      }
+        function load() {
+          ViewController.toggle('vending-survey');
+          DOM.pageTitle.textContent = 'オフィス自販機アンケート';
+          DOM.pageLead.textContent = '設置したい自販機メーカーと商品要望を教えてください。';
+          DOM.backLink.href = '?view=vending-survey';
 
-      function handleSubmit() {
-        if (!selectedMaker) {
-          makerError.textContent = 'メーカーを1つ選択してください。';
-          return;
-        }
-
-        submitButton.disabled = true;
-        surveyMessage.textContent = '';
-        makerError.textContent = '';
-
-        const payload = {
-          email: userEmail,
-          manufacturer: selectedMaker.name || '',
-          request: requestInput.value.trim(),
-        };
-
-        if (google?.script?.run) {
-          google.script.run
-            .withSuccessHandler(() => {
-              surveyMessage.className = 'success';
-              surveyMessage.textContent = '回答を送信しました。ご協力ありがとうございます！';
-              submitButton.disabled = false;
-            })
-            .withFailureHandler((err) => {
-              surveyMessage.className = 'error';
-              surveyMessage.textContent = `送信に失敗しました。${err && err.message ? err.message : ''}`;
-              submitButton.disabled = false;
-            })
-            .submitVendingSurvey(payload);
-        } else {
-          surveyMessage.className = 'success';
-          surveyMessage.textContent = 'プレビュー環境では送信できませんが、選択内容は以下です。';
-          console.log(payload);
-          submitButton.disabled = false;
-        }
-      }
-
-      function handleReset() {
-        selectedMaker = null;
-        makerGrid.querySelectorAll('.maker-card').forEach((node) => {
-          node.classList.remove('selected', 'dimmed');
-        });
-        makerError.textContent = '';
-        surveyMessage.textContent = '';
-        requestInput.value = '';
-      }
-
-      function renderLineup(data) {
-        const manufacturer = (data && data.manufacturer) || params.get('maker') || 'ラインアップ';
-        pageTitle.textContent = `${manufacturer} の商品ラインアップ`;
-        pageLead.textContent = '商品画像と価格をカテゴリーごとにまとめています。';
-        backLink.href = '?view=vending-survey';
-        backLink.textContent = '← アンケートに戻る';
-        backLink.style.display = 'inline-flex';
-
-        const categories = (data && data.categories) || [];
-        if (!categories.length) {
-          lineupContainer.innerHTML = '<p class="empty">表示できる商品情報がありません。</p>';
-          return;
-        }
-
-        lineupContainer.innerHTML = '';
-        categories.forEach((category) => {
-          const section = document.createElement('section');
-          section.className = 'category';
-          section.innerHTML = `
-            <div class="category-header">
-              <h2>${category.name || 'カテゴリー'}</h2>
-              <span class="badge">${(category.items || []).length} 件</span>
-            </div>
-            <div class="product-grid"></div>
-          `;
-
-          const grid = section.querySelector('.product-grid');
-          if (!category.items || !category.items.length) {
-            grid.innerHTML = '<p class="empty">商品が見つかりませんでした。</p>';
+          if (google?.script?.run?.getVendingManufacturers) {
+            google.script.run.withSuccessHandler(render).withFailureHandler(showError).getVendingManufacturers();
+            fetchEmail();
           } else {
-            category.items.forEach((item) => {
-              const card = document.createElement('article');
-              card.className = 'product-card';
-              card.innerHTML = `
-                <img src="${item.imageUrl || buildImageUrl(item.imageId)}" alt="${
-                item.name || '商品画像'
-              }" />
-                <h3 class="product-name">${(item.name || '').replace(/\.[^.]+$/, '') || '商品名'}</h3>
-                <div class="product-price">${item.price ? `¥${item.price}` : '価格未設定'}</div>
-              `;
-              grid.appendChild(card);
-            });
+            // Preview fallback
+            render([
+              {
+                name: 'メーカーA',
+                imageId: '',
+                features: [
+                  { status: '可能', label: '小型機ラインアップあり' },
+                  { status: '不可(販売会社決定)', label: 'オフィスサポート不可' },
+                ],
+              },
+            ]);
+          }
+        }
+
+        function handleSubmit() {
+          if (!AppState.selectedMaker) {
+            DOM.makerError.textContent = 'メーカーを1つ選択してください。';
+            return;
           }
 
-          lineupContainer.appendChild(section);
-        });
-      }
+          DOM.submitButton.disabled = true;
+          DOM.surveyMessage.textContent = '';
+          DOM.makerError.textContent = '';
 
-      function showLineupError(err) {
-        lineupContainer.innerHTML = `<p class="empty">商品情報の取得に失敗しました。${
-          err && err.message ? ` (詳細: ${err.message})` : ''
-        }</p>`;
-      }
+          const payload = {
+            email: AppState.userEmail,
+            manufacturer: AppState.selectedMaker.name || '',
+            request: DOM.requestInput.value.trim(),
+          };
 
-      function loadLineup() {
-        toggleView('lineup');
-        const maker = params.get('maker') || '';
-        const folderId = params.get('folderId') || '';
-        if (google?.script?.run) {
-          google.script.run
-            .withSuccessHandler(renderLineup)
-            .withFailureHandler(showLineupError)
-            .getVendingLineup(maker, folderId);
+          if (google?.script?.run?.submitVendingSurvey) {
+            google.script.run
+              .withSuccessHandler(() => {
+                DOM.surveyMessage.className = 'success';
+                DOM.surveyMessage.textContent = '回答を送信しました。ご協力ありがとうございます！';
+                DOM.submitButton.disabled = false;
+              })
+              .withFailureHandler((err) => {
+                DOM.surveyMessage.className = 'error';
+                DOM.surveyMessage.textContent = `送信に失敗しました。${err && err.message ? err.message : ''}`;
+                DOM.submitButton.disabled = false;
+              })
+              .submitVendingSurvey(payload);
+          } else {
+            DOM.surveyMessage.className = 'success';
+            DOM.surveyMessage.textContent = 'プレビュー環境では送信できませんが、選択内容は以下です。';
+            console.log(payload);
+            DOM.submitButton.disabled = false;
+          }
+        }
+
+        function handleReset() {
+          AppState.selectedMaker = null;
+          DOM.makerGrid.querySelectorAll('.maker-card').forEach((node) => {
+            node.classList.remove('selected', 'dimmed');
+          });
+          DOM.makerError.textContent = '';
+          DOM.surveyMessage.textContent = '';
+          DOM.requestInput.value = '';
+        }
+
+        function bind() {
+          DOM.submitButton.addEventListener('click', handleSubmit);
+          DOM.resetButton.addEventListener('click', handleReset);
+        }
+
+        return {
+          load,
+          bind,
+        };
+      })();
+
+      const LineupPage = (() => {
+        function render(data) {
+          const manufacturer = (data && data.manufacturer) || params.get('maker') || 'ラインアップ';
+          DOM.pageTitle.textContent = `${manufacturer} の商品ラインアップ`;
+          DOM.pageLead.textContent = '商品画像と価格をカテゴリーごとにまとめています。';
+          DOM.backLink.href = '?view=vending-survey';
+          DOM.backLink.textContent = '← アンケートに戻る';
+          DOM.backLink.style.display = 'inline-flex';
+
+          const categories = (data && data.categories) || [];
+          if (!categories.length) {
+            DOM.lineupContainer.innerHTML = '<p class="empty">表示できる商品情報がありません。</p>';
+            return;
+          }
+
+          DOM.lineupContainer.innerHTML = '';
+          categories.forEach((category) => {
+            const section = document.createElement('section');
+            section.className = 'category';
+            section.innerHTML = `
+              <div class="category-header">
+                <h2>${category.name || 'カテゴリー'}</h2>
+                <span class="badge">${(category.items || []).length} 件</span>
+              </div>
+              <div class="product-grid"></div>
+            `;
+
+            const grid = section.querySelector('.product-grid');
+            if (!category.items || !category.items.length) {
+              grid.innerHTML = '<p class="empty">商品が見つかりませんでした。</p>';
+            } else {
+              category.items.forEach((item) => {
+                const card = document.createElement('article');
+                card.className = 'product-card';
+                card.innerHTML = `
+                  <img src="${item.imageUrl || Helpers.buildImageUrl(item.imageId)}" alt="${
+                  item.name || '商品画像'
+                }" />
+                  <h3 class="product-name">${Helpers.stripExtension(item.name) || '商品名'}</h3>
+                  <div class="product-price">${item.price ? `¥${item.price}` : '価格未設定'}</div>
+                `;
+                grid.appendChild(card);
+              });
+            }
+
+            DOM.lineupContainer.appendChild(section);
+          });
+        }
+
+        function showError(err) {
+          DOM.lineupContainer.innerHTML = `<p class="empty">商品情報の取得に失敗しました。${
+            err && err.message ? ` (詳細: ${err.message})` : ''
+          }</p>`;
+        }
+
+        function load() {
+          ViewController.toggle('lineup');
+          const maker = params.get('maker') || '';
+          const folderId = params.get('folderId') || '';
+          if (google?.script?.run?.getVendingLineup) {
+            google.script.run.withSuccessHandler(render).withFailureHandler(showError).getVendingLineup(maker, folderId);
+          } else {
+            render({
+              manufacturer: maker,
+              categories: [
+                {
+                  name: 'コーヒー',
+                  items: [
+                    { name: 'ブレンド', price: '130', imageId: '' },
+                    { name: 'ラテ', price: '150', imageId: '' },
+                  ],
+                },
+              ],
+            });
+          }
+        }
+
+        return { load };
+      })();
+
+      function init() {
+        SurveyPage.bind();
+        if (currentView === 'lineup') {
+          LineupPage.load();
+        } else {
+          SurveyPage.load();
         }
       }
 
-      submitButton.addEventListener('click', handleSubmit);
-      resetButton.addEventListener('click', handleReset);
-
-      if (currentView === 'lineup') {
-        loadLineup();
-      } else {
-        loadSurvey();
-      }
+      init();
     </script>
   </body>
 </html>
