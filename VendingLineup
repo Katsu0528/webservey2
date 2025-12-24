@@ -368,7 +368,7 @@
           <span class="pill alt">１つ選ぶだけ</span>
         </div>
         <h1 id="pageTitle"></h1>
-        <p id="pageLead" class="lead">メーカー別に商品と価格をまとめています。</p>
+        <p id="pageLead" class="lead"></p>
       </header>
 
       <section id="controls" class="controls"></section>
@@ -378,6 +378,12 @@
     <script>
       const makerFromTemplate = <?!= JSON.stringify(maker || '') ?>;
       const folderIdFromTemplate = <?!= JSON.stringify(folderId || '') ?>;
+
+      const SURVEY_TITLE = '新オフィスの自販機を皆さんの投票で決めます！';
+      const QUESTION1_DESCRIPTION = '４つのメーカーのうち、どれか一つ好きなメーカーを選んでください。';
+      const LINEUP_INSTRUCTION = '商品ラインアップをクリックすると商品が確認できます。';
+      const QUESTION2_DESCRIPTION =
+        'オフィスの自販機に「これは絶対に欲しい！」という飲み物やカテゴリがあれば、自由にご記入ください。';
 
       const FALLBACK_IMAGE =
         'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="360" height="240" viewBox="0 0 360 240"><rect width="360" height="240" fill="%23f2f4f7"/><rect x="30" y="30" width="300" height="180" rx="12" fill="none" stroke="%23c3cad4" stroke-width="8"/><path d="M96 166l48-58 48 58 48-72 24 32" fill="none" stroke="%23c3cad4" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><circle cx="138" cy="90" r="22" fill="%23d8dde5"/></svg>';
@@ -401,6 +407,13 @@
         }
 
         return src;
+      }
+
+      function trimExtension(name) {
+        if (!name) return '';
+        const lastDotIndex = name.lastIndexOf('.');
+        if (lastDotIndex <= 0) return name;
+        return name.slice(0, lastDotIndex);
       }
 
       function createImageElement(src, alt) {
@@ -445,7 +458,7 @@
         items.forEach((item) => {
           const tr = document.createElement('tr');
           const nameCell = document.createElement('td');
-          nameCell.textContent = item.name || '商品名未設定';
+          nameCell.textContent = trimExtension(item.name) || '商品名未設定';
 
           const priceCell = document.createElement('td');
           priceCell.textContent = item.price ? `¥${item.price}` : '価格未設定';
@@ -463,6 +476,30 @@
         return wrapper;
       }
 
+      function renderControls() {
+        const controls = document.getElementById('controls');
+        controls.innerHTML = `
+          <div class="control-row">
+            <div>
+              <p class="eyebrow">質問１</p>
+              <h2>メーカーを選んでください</h2>
+              <p class="lead">${QUESTION1_DESCRIPTION}</p>
+              <p class="note">${LINEUP_INSTRUCTION}</p>
+            </div>
+            <div>
+              <p class="eyebrow">質問２</p>
+              <h2>欲しいドリンクやカテゴリ</h2>
+              <p class="lead">${QUESTION2_DESCRIPTION}</p>
+            </div>
+          </div>
+        `;
+      }
+
+      function applySurveyHeaders(leadText) {
+        document.getElementById('pageTitle').textContent = SURVEY_TITLE;
+        document.getElementById('pageLead').textContent = leadText || QUESTION1_DESCRIPTION;
+      }
+
       document.addEventListener('DOMContentLoaded', function () {
         google.script.run
           .withSuccessHandler(renderLineup)
@@ -476,12 +513,10 @@
         const categories = (data && data.categories) || [];
         const manufacturers = (data && data.manufacturers) || [];
 
-        renderControls(manufacturers, manufacturer);
+        renderControls();
+        applySurveyHeaders(`${QUESTION1_DESCRIPTION} ${LINEUP_INSTRUCTION}`);
 
         if (categories.length) {
-          document.getElementById('pageTitle').textContent = `新オフィスの自販機を皆さんの投票で決めます！`;
-          document.getElementById('pageLead').textContent = '良いと思うメーカーを一つ選んでください！';
-
           container.innerHTML = '';
           categories.forEach((category) => {
             const section = document.createElement('section');
@@ -491,7 +526,6 @@
                 <div>
                   <p class="eyebrow">自販機メーカー一覧</p>
                   <h2>${category.name || 'カテゴリー'}</h2>
-                  <p class="section-lead">${(category.items || []).length} 件の商品を表示しています。</p>
                 </div>
               </div>
               <div class="card-grid product-grid"></div>
@@ -505,7 +539,9 @@
                 const card = document.createElement('article');
                 card.className = 'card product-card';
 
-                const img = createImageElement(item.imageUrl, item.name || '商品画像');
+                const itemDisplayName = trimExtension(item.name) || '商品名';
+
+                const img = createImageElement(item.imageUrl, itemDisplayName || '商品画像');
                 const badge = document.createElement('span');
                 badge.className = 'badge';
                 badge.textContent = category.name || 'カテゴリ';
@@ -522,7 +558,7 @@
                 meta.appendChild(price);
 
                 const name = document.createElement('h3');
-                name.textContent = item.name || '商品名';
+                name.textContent = itemDisplayName;
 
                 card.appendChild(img);
                 card.appendChild(badge);
@@ -541,8 +577,7 @@
         }
 
         if (manufacturers.length) {
-          document.getElementById('pageTitle').textContent = '自販機メーカー一覧';
-          document.getElementById('pageLead').textContent = 'メーカーを選択して商品ラインアップをご覧ください。';
+          applySurveyHeaders(`${QUESTION1_DESCRIPTION} ${LINEUP_INSTRUCTION}`);
 
           const list = document.createElement('section');
           list.className = 'block';
@@ -551,7 +586,6 @@
               <div>
                 <p class="eyebrow">メーカー一覧</p>
                 <h2>メーカー</h2>
-                <p class="section-lead">${manufacturers.length} 件のメーカーから選択できます。</p>
               </div>
             </div>
             <div class="card-grid manufacturer-grid"></div>
