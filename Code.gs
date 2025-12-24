@@ -1,3 +1,6 @@
+/** デフォルトで参照するメーカー一覧フォルダ ID */
+var DEFAULT_MANUFACTURERS_FOLDER_ID = '1AJd4BTFTVrLNep44PDz1AuwSF_5TFxdx';
+
 /**
  * Vending lineup web app entry point.
  * @param {GoogleAppsScript.Events.DoGet} e
@@ -32,9 +35,11 @@ function getVendingLineup(maker, folderId) {
   var result = {
     manufacturer: maker || 'ラインアップ',
     categories: [],
+    manufacturers: [],
   };
 
   if (!folderId) {
+    result.manufacturers = getManufacturers();
     return result;
   }
 
@@ -61,6 +66,33 @@ function getVendingLineup(maker, folderId) {
   }
 
   return result;
+}
+
+/**
+ * メーカー一覧を取得する。デフォルトフォルダ配下のサブフォルダをメーカーとして扱う。
+ * @returns {Array<{name: string, folderId: string, imageUrl: string}>}
+ */
+function getManufacturers() {
+  if (!DEFAULT_MANUFACTURERS_FOLDER_ID) return [];
+
+  try {
+    var root = DriveApp.getFolderById(DEFAULT_MANUFACTURERS_FOLDER_ID);
+    var folders = root.getFolders();
+    var manufacturers = [];
+
+    while (folders.hasNext()) {
+      var folder = folders.next();
+      manufacturers.push({
+        name: folder.getName(),
+        folderId: folder.getId(),
+        imageUrl: getFirstImageUrl(folder),
+      });
+    }
+
+    return manufacturers;
+  } catch (err) {
+    throw new Error('メーカー一覧の取得に失敗しました: ' + err.message);
+  }
 }
 
 /**
@@ -95,4 +127,18 @@ function parsePrice(description) {
   if (!description) return '';
   var match = String(description).match(/([0-9]{2,})/);
   return match ? match[1] : '';
+}
+
+/**
+ * フォルダ内の最初のファイルの URL を取得する。
+ * @param {GoogleAppsScript.Drive.Folder} folder
+ * @returns {string}
+ */
+function getFirstImageUrl(folder) {
+  var files = folder.getFiles();
+  if (files.hasNext()) {
+    var file = files.next();
+    return file.getUrl();
+  }
+  return '';
 }

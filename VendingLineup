@@ -84,6 +84,10 @@
         gap: 12px;
       }
 
+      .manufacturer-grid {
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+
       .product-card {
         border: 1px solid var(--border);
         border-radius: 12px;
@@ -111,6 +115,30 @@
       .product-price {
         color: #2563eb;
         font-weight: 800;
+      }
+
+      .manufacturer-card {
+        gap: 12px;
+      }
+
+      .manufacturer-card img {
+        height: 140px;
+      }
+
+      .button {
+        display: inline-block;
+        padding: 10px 14px;
+        background: var(--accent);
+        color: #fff;
+        border-radius: 10px;
+        font-weight: 700;
+        text-decoration: none;
+        text-align: center;
+        transition: transform 0.12s ease;
+      }
+
+      .button:hover {
+        transform: translateY(-1px);
       }
 
       .empty {
@@ -145,47 +173,80 @@
 
       function renderLineup(data) {
         const container = document.getElementById('lineupContainer');
-        const manufacturer = (data && data.manufacturer) || maker || 'ラインアップ';
-        document.getElementById('pageTitle').textContent = `${manufacturer} の商品ラインアップ`;
-        document.getElementById('pageLead').textContent = 'カテゴリーごとに商品画像と価格をまとめました。';
-
+        const manufacturer = (data && data.manufacturer) || maker || '';
         const categories = (data && data.categories) || [];
-        if (!categories.length) {
-          container.innerHTML =
-            '<p class="empty">現在表示できる商品情報がありません。商品の準備が整い次第、こちらに表示されます。</p>';
+        const manufacturers = (data && data.manufacturers) || [];
+
+        if (categories.length) {
+          document.getElementById('pageTitle').textContent = `${manufacturer || 'ラインアップ'} の商品ラインアップ`;
+          document.getElementById('pageLead').textContent = 'カテゴリーごとに商品画像と価格をまとめました。';
+
+          container.innerHTML = '';
+          categories.forEach((category) => {
+            const section = document.createElement('section');
+            section.className = 'category';
+            section.innerHTML = `
+              <div class="category-header">
+                <h2>${category.name || 'カテゴリー'}</h2>
+                <span class="lead">${(category.items || []).length} 件</span>
+              </div>
+              <div class="product-grid"></div>
+            `;
+
+            const grid = section.querySelector('.product-grid');
+            if (!category.items || !category.items.length) {
+              grid.innerHTML = '<p class="empty">商品が見つかりませんでした。</p>';
+            } else {
+              category.items.forEach((item) => {
+                const card = document.createElement('article');
+                card.className = 'product-card';
+                card.innerHTML = `
+                  <img src="${item.imageUrl || ''}" alt="${item.name || '商品画像'}" />
+                  <h3 class="product-name">${item.name || '商品名'}</h3>
+                  <div class="product-price">${item.price ? `¥${item.price}` : '価格未設定'}</div>
+                `;
+                grid.appendChild(card);
+              });
+            }
+
+            container.appendChild(section);
+          });
           return;
         }
 
-        container.innerHTML = '';
-        categories.forEach((category) => {
-          const section = document.createElement('section');
-          section.className = 'category';
-          section.innerHTML = `
+        if (manufacturers.length) {
+          document.getElementById('pageTitle').textContent = '自販機メーカー一覧';
+          document.getElementById('pageLead').textContent = 'メーカーを選択して商品ラインアップをご覧ください。';
+
+          const list = document.createElement('section');
+          list.className = 'category';
+          list.innerHTML = `
             <div class="category-header">
-              <h2>${category.name || 'カテゴリー'}</h2>
-              <span class="lead">${(category.items || []).length} 件</span>
+              <h2>メーカー</h2>
+              <span class="lead">${manufacturers.length} 件</span>
             </div>
-            <div class="product-grid"></div>
+            <div class="product-grid manufacturer-grid"></div>
           `;
 
-          const grid = section.querySelector('.product-grid');
-          if (!category.items || !category.items.length) {
-            grid.innerHTML = '<p class="empty">商品が見つかりませんでした。</p>';
-          } else {
-            category.items.forEach((item) => {
-              const card = document.createElement('article');
-              card.className = 'product-card';
-              card.innerHTML = `
-                <img src="${item.imageUrl || ''}" alt="${item.name || '商品画像'}" />
-                <h3 class="product-name">${item.name || '商品名'}</h3>
-                <div class="product-price">${item.price ? `¥${item.price}` : '価格未設定'}</div>
-              `;
-              grid.appendChild(card);
-            });
-          }
+          const grid = list.querySelector('.product-grid');
+          manufacturers.forEach((makerInfo) => {
+            const card = document.createElement('article');
+            card.className = 'product-card manufacturer-card';
+            card.innerHTML = `
+              <img src="${makerInfo.imageUrl || ''}" alt="${makerInfo.name}" />
+              <h3 class="product-name">${makerInfo.name}</h3>
+              <a class="button" href="?maker=${encodeURIComponent(makerInfo.name)}&folderId=${encodeURIComponent(makerInfo.folderId)}">ラインアップを表示</a>
+            `;
+            grid.appendChild(card);
+          });
 
-          container.appendChild(section);
-        });
+          container.innerHTML = '';
+          container.appendChild(list);
+          return;
+        }
+
+        container.innerHTML =
+          '<p class="empty">現在表示できる商品情報がありません。商品の準備が整い次第、こちらに表示されます。</p>';
       }
 
       function showError(err) {
