@@ -81,10 +81,12 @@ function getManufacturers() {
 
     while (folders.hasNext()) {
       var folder = folders.next();
+      var firstImage = getFirstImageInfo(folder);
       manufacturers.push({
         name: folder.getName(),
         folderId: folder.getId(),
-        imageUrl: getFirstImageUrl(folder),
+        imageUrl: firstImage.url,
+        imageName: firstImage.name,
       });
     }
 
@@ -133,13 +135,16 @@ function parsePrice(description) {
  * @param {GoogleAppsScript.Drive.Folder} folder
  * @returns {string}
  */
-function getFirstImageUrl(folder) {
+function getFirstImageInfo(folder) {
   var files = folder.getFiles();
   if (files.hasNext()) {
     var file = files.next();
-    return getImageUrl(file);
+    return {
+      url: getImageUrl(file),
+      name: file.getName(),
+    };
   }
-  return '';
+  return { url: '', name: '' };
 }
 
 /**

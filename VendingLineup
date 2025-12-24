@@ -419,6 +419,9 @@
       const FALLBACK_IMAGE =
         'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="360" height="240" viewBox="0 0 360 240"><rect width="360" height="240" fill="%23f2f4f7"/><rect x="30" y="30" width="300" height="180" rx="12" fill="none" stroke="%23c3cad4" stroke-width="8"/><path d="M96 166l48-58 48 58 48-72 24 32" fill="none" stroke="%23c3cad4" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><circle cx="138" cy="90" r="22" fill="%23d8dde5"/></svg>';
 
+      const MAX_TABLE_COLUMNS = 4;
+      const MAX_MANUFACTURERS = MAX_TABLE_COLUMNS - 1;
+
       const params = new URLSearchParams(window.location.search);
       const maker = params.get('maker') || makerFromTemplate || '';
       const folderId = params.get('folderId') || folderIdFromTemplate || '';
@@ -445,6 +448,10 @@
         const lastDotIndex = name.lastIndexOf('.');
         if (lastDotIndex <= 0) return name;
         return name.slice(0, lastDotIndex);
+      }
+
+      function getMakerDisplayName(entry) {
+        return entry.name || trimExtension(entry.imageName) || 'メーカー未設定';
       }
 
       function createImageElement(src, alt) {
@@ -535,16 +542,28 @@
           return category.items.map((item) => ({ ...item, category: category.name || 'カテゴリ未設定' }));
         });
 
-        const tableManufacturers = manufacturers.length
-          ? manufacturers
+        const normalizedManufacturers = manufacturers.map((entry) => ({
+          ...entry,
+          name: entry.name || trimExtension(entry.imageName),
+        }));
+
+        const tableManufacturers = normalizedManufacturers.length
+          ? normalizedManufacturers
           : [
               {
                 name: manufacturer || 'メーカー未設定',
                 imageUrl: (allItems[0] && allItems[0].imageUrl) || '',
+                imageName: (allItems[0] && allItems[0].name) || manufacturer,
               },
             ];
 
-        const displayedManufacturers = tableManufacturers.slice(0, 4);
+        const displayedManufacturers = tableManufacturers.slice(0, MAX_MANUFACTURERS);
+
+        const makerListMarkup = normalizedManufacturers.length
+          ? normalizedManufacturers
+              .map((m) => `<span class="maker-pill">${getMakerDisplayName(m)}</span>`)
+              .join('')
+          : `<span class="maker-pill">${getMakerDisplayName(tableManufacturers[0])}</span>`;
 
         container.innerHTML = '';
         renderQuestionTwoSection();
@@ -563,11 +582,7 @@
             <p class="note">${LINEUP_INSTRUCTION}</p>
           </div>
           <div class="maker-list">
-            ${(manufacturers.length
-              ? manufacturers
-                  .map((m) => `<span class="maker-pill">${m.name}</span>`)
-                  .join('')
-              : `<span class="maker-pill">${manufacturer || 'メーカー未設定'}</span>`)}
+            ${makerListMarkup}
           </div>
         `;
 
@@ -577,14 +592,15 @@
           const imageGrid = document.createElement('div');
           imageGrid.className = 'image-grid';
           displayedManufacturers.forEach((makerEntry) => {
+            const displayName = getMakerDisplayName(makerEntry);
             const figure = document.createElement('figure');
             figure.className = 'image-card';
             figure.tabIndex = 0;
             figure.setAttribute('role', 'button');
             figure.setAttribute('aria-pressed', 'false');
-            figure.appendChild(createImageElement(makerEntry.imageUrl, makerEntry.name));
+            figure.appendChild(createImageElement(makerEntry.imageUrl, displayName));
             const caption = document.createElement('figcaption');
-            caption.textContent = makerEntry.name || 'メーカー未設定';
+            caption.textContent = displayName;
             figure.appendChild(caption);
             imageGrid.appendChild(figure);
           });
@@ -603,7 +619,7 @@
           : '';
 
         const manufacturerEntries = displayedManufacturers.map((makerEntry) => {
-          const name = makerEntry.name || 'メーカー未設定';
+          const name = getMakerDisplayName(makerEntry);
           const isKirin = /キリン/.test(name);
           const isAsahi = /アサヒ/.test(name);
           const isCurrentSelection = manufacturer && name && manufacturer.indexOf(name) !== -1;
