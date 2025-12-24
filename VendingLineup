@@ -237,9 +237,12 @@
 
       .image-grid {
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(220px, 1fr);
         gap: 12px;
         margin: 12px 0 4px;
+        overflow-x: auto;
+        padding-bottom: 6px;
       }
 
       .maker-ribbon {
@@ -295,6 +298,7 @@
         display: flex;
         flex-direction: column;
         gap: 8px;
+        min-width: 220px;
         cursor: pointer;
         transition: 0.18s ease;
         box-shadow: 0 10px 20px rgba(61, 78, 255, 0.06);
