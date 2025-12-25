@@ -444,17 +444,6 @@
 
       let selectedMakerName = maker || '';
 
-      function buildCatalogUrl(makerName, folderId) {
-        if (!folderId) return '';
-
-        const url = new URL(window.location.href);
-        url.search = '';
-        url.hash = '';
-        url.searchParams.set('maker', makerName || '');
-        url.searchParams.set('folderId', folderId);
-        return url.toString();
-      }
-
       function toEmbeddableUrl(src) {
         if (!src) return '';
 
@@ -618,7 +607,7 @@
         const normalizedManufacturers = manufacturers.map((entry) => ({
           ...entry,
           name: entry.name || trimExtension(entry.imageName),
-          catalogUrl: buildCatalogUrl(entry.name || trimExtension(entry.imageName), entry.folderId),
+          catalogUrl: entry.catalogUrl || '',
         }));
 
         const normalizedMap = new Map(
@@ -663,7 +652,7 @@
           const name = getMakerDisplayName(makerEntry);
           const isKirin = /キリン/.test(name);
           const isAsahi = /アサヒ/.test(name);
-          const catalogUrl = makerEntry.catalogUrl || buildCatalogUrl(name, makerEntry.folderId);
+          const catalogUrl = makerEntry.catalogUrl || '';
 
           return {
             name,
@@ -727,7 +716,6 @@
 
         const tbody = document.createElement('tbody');
         const rows = [
-          { label: 'メーカー名', accessor: (entry) => entry.name },
           { label: '商品カスタマイズ', accessor: (entry) => entry.customStatus },
           { label: 'カタログ', accessor: (entry) => entry.catalogLink, cellClass: 'lineup-text' },
           { label: '備考', accessor: (entry) => entry.note },
