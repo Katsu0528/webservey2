@@ -663,7 +663,7 @@
             },
             note: isAsahi ? '※設置できない可能性あり' : '',
             catalogLink: catalogUrl
-              ? { href: catalogUrl, text: 'カタログを見る' }
+              ? { href: catalogUrl, text: 'カタログ' }
               : '準備中',
           };
         });
