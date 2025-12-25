@@ -1,6 +1,12 @@
 /** デフォルトで参照するメーカー一覧フォルダ ID */
 var DEFAULT_MANUFACTURERS_FOLDER_ID = '1AJd4BTFTVrLNep44PDz1AuwSF_5TFxdx';
 
+/** 集計結果を書き込むスプレッドシート ID */
+var SURVEY_SPREADSHEET_ID = '1xkg8vNscpcWTA6GA0VPxGTJCAH6LyvsYhq7VhOlDcXg';
+
+/** 集計結果を書き込むシート名 */
+var SURVEY_SHEET_NAME = '集計';
+
 /**
  * Vending lineup web app entry point.
  * @param {GoogleAppsScript.Events.DoGet} e
@@ -158,4 +164,24 @@ function getImageUrl(file) {
   var id = file && file.getId && file.getId();
   if (!id) return '';
   return 'https://lh3.googleusercontent.com/d/' + id;
+}
+
+/**
+ * アンケートの回答をスプレッドシートに保存する。
+ * @param {string} email メールアドレス
+ * @param {string} question1Answer 質問1の回答
+ * @param {string} question2Answer 質問2の回答
+ */
+function submitSurveyResponse(email, question1Answer, question2Answer) {
+  if (!SURVEY_SPREADSHEET_ID) {
+    throw new Error('集計先のスプレッドシート ID が設定されていません。');
+  }
+
+  var spreadsheet = SpreadsheetApp.openById(SURVEY_SPREADSHEET_ID);
+  var sheet = spreadsheet.getSheetByName(SURVEY_SHEET_NAME);
+  if (!sheet) {
+    throw new Error('集計シートが見つかりません。');
+  }
+
+  sheet.appendRow([new Date(), email || '', question1Answer || '', question2Answer || '']);
 }

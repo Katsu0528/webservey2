@@ -124,7 +124,8 @@
       }
 
       select,
-      textarea {
+      textarea,
+      input[type='email'] {
         width: 100%;
         border: 1px solid var(--border);
         border-radius: 12px;
@@ -137,6 +138,16 @@
       textarea {
         min-height: 96px;
         resize: vertical;
+      }
+
+      .status-message {
+        margin: 0;
+        font-size: 13px;
+        color: #2f3345;
+      }
+
+      .status-message.error {
+        color: #d92b4c;
       }
 
       .question-two {
@@ -424,6 +435,8 @@
       const maker = params.get('maker') || makerFromTemplate || '';
       const folderId = params.get('folderId') || folderIdFromTemplate || '';
 
+      let selectedMakerName = maker || '';
+
       function buildCatalogUrl(makerName, folderId) {
         if (!folderId) return '';
 
@@ -484,16 +497,19 @@
         return wrapper;
       }
 
-      function enableImageSelection(imageGrid) {
+      function enableImageSelection(imageGrid, onSelect) {
         const cards = Array.from(imageGrid.querySelectorAll('.image-card'));
         if (!cards.length) return;
 
-        const applySelection = (selectedCard) => {
+        const applySelection = (selectedCard, shouldNotify = true) => {
           cards.forEach((card) => {
             const isSelected = card === selectedCard;
             card.classList.toggle('selected', isSelected);
             card.classList.toggle('dimmed', !!selectedCard && !isSelected);
             card.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+            if (isSelected && shouldNotify && typeof onSelect === 'function') {
+              onSelect(card.dataset.makerName || '');
+            }
           });
         };
 
@@ -508,6 +524,12 @@
             }
           });
         });
+
+        const initialCard =
+          cards.find((card) => (card.dataset.makerName || '') === maker) || cards[0];
+        if (initialCard) {
+          applySelection(initialCard, true);
+        }
       }
 
       function renderQuestionTwoSection() {
@@ -520,12 +542,59 @@
             <p class="lead">${QUESTION2_DESCRIPTION}</p>
           </div>
           <div class="question-two-body">
+            <label>
+              メールアドレス
+              <input type="email" placeholder="survey@example.com" />
+            </label>
             <textarea placeholder="欲しい商品やカテゴリを自由にご記入ください"></textarea>
+            <p class="status-message" aria-live="polite"></p>
             <div class="question-two-actions">
               <button type="button">送信</button>
             </div>
           </div>
         `;
+
+        const textarea = questionTwo.querySelector('textarea');
+        const emailInput = questionTwo.querySelector('input[type="email"]');
+        const submitButton = questionTwo.querySelector('button');
+        const statusElement = questionTwo.querySelector('.status-message');
+
+        const setStatus = (message, isError) => {
+          statusElement.textContent = message || '';
+          statusElement.classList.toggle('error', !!isError);
+        };
+
+        submitButton.addEventListener('click', () => {
+          const email = (emailInput.value || '').trim();
+          const question2Answer = (textarea.value || '').trim();
+          const question1Answer = selectedMakerName || '';
+
+          if (!email) {
+            setStatus('メールアドレスを入力してください。', true);
+            emailInput.focus();
+            return;
+          }
+
+          if (!question1Answer) {
+            setStatus('質問１の回答を選択してください。', true);
+            return;
+          }
+
+          submitButton.disabled = true;
+          setStatus('送信中です...', false);
+
+          google.script.run
+            .withSuccessHandler(() => {
+              setStatus('送信しました。ご協力ありがとうございます！');
+              textarea.value = '';
+              submitButton.disabled = false;
+            })
+            .withFailureHandler((err) => {
+              setStatus(`送信に失敗しました。${err && err.message ? err.message : ''}`, true);
+              submitButton.disabled = false;
+            })
+            .submitSurveyResponse(email, question1Answer, question2Answer);
+        });
       }
 
       function applySurveyHeaders(leadText) {
@@ -644,13 +713,16 @@
           figure.tabIndex = 0;
           figure.setAttribute('role', 'button');
           figure.setAttribute('aria-pressed', 'false');
+          figure.dataset.makerName = displayName;
           figure.appendChild(createImageElement(makerEntry.imageUrl, displayName));
           const caption = document.createElement('figcaption');
           caption.textContent = displayName;
           figure.appendChild(caption);
           imageGrid.appendChild(figure);
         });
-        enableImageSelection(imageGrid);
+        enableImageSelection(imageGrid, (name) => {
+          selectedMakerName = name;
+        });
         section.appendChild(imageGrid);
 
         const tableWrapper = document.createElement('div');
