@@ -355,28 +355,5 @@ function submitSurveyResponse(question1Answer, question2Answer) {
     throw new Error('集計シートが見つかりません。');
   }
 
-  var email = getUserEmail();
-
-  sheet.appendRow([new Date(), email || '', question1Answer || '', question2Answer || '']);
-}
-
-/**
- * 現在ログインしているユーザーのメールアドレスを内部的に取得する。
- * Apps Script の実行権限に応じて ActiveUser または EffectiveUser を参照する。
- * @returns {string}
- */
-function getUserEmail() {
-  var active = Session.getActiveUser();
-  if (active) {
-    var email = active.getEmail();
-    if (email) return email;
-  }
-
-  var effective = Session.getEffectiveUser();
-  if (effective) {
-    var effectiveEmail = effective.getEmail();
-    if (effectiveEmail) return effectiveEmail;
-  }
-
-  return '';
+  sheet.appendRow([new Date(), question1Answer || '', question2Answer || '']);
 }
