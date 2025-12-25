@@ -438,6 +438,8 @@
       const MAX_TABLE_COLUMNS = 5;
       const MAX_MANUFACTURERS = MAX_TABLE_COLUMNS - 1;
 
+      const PREFERRED_MANUFACTURER_ORDER = ['ポッカサッポロ', 'アサヒ', 'キリン', '伊藤園'];
+
       const params = new URLSearchParams(window.location.search);
       const maker = params.get('maker') || makerFromTemplate || '';
       const folderId = params.get('folderId') || folderIdFromTemplate || '';
@@ -470,6 +472,50 @@
 
       function getMakerDisplayName(entry) {
         return entry.name || trimExtension(entry.imageName) || 'メーカー未設定';
+      }
+
+      function normalizeKey(value) {
+        if (!value) return '';
+        return trimExtension(String(value))
+          .replace(/[\s\u3000\(\)（）_\-]/g, '')
+          .toLowerCase();
+      }
+
+      function enforcePreferredOrder(entries) {
+        const normalizedMap = new Map();
+        entries.forEach((entry) => {
+          const keys = [entry.name, entry.imageName];
+          keys.forEach((key) => {
+            const normalized = normalizeKey(key);
+            if (normalized && !normalizedMap.has(normalized)) {
+              normalizedMap.set(normalized, entry);
+            }
+          });
+        });
+
+        const ordered = PREFERRED_MANUFACTURER_ORDER.map((name) => {
+          const normalized = normalizeKey(name);
+          return (
+            normalizedMap.get(normalized) || {
+              name,
+              imageUrl: '',
+              imageName: '',
+              folderId: '',
+            }
+          );
+        });
+
+        const preferredKeys = new Set(
+          PREFERRED_MANUFACTURER_ORDER.map((name) => normalizeKey(name))
+        );
+
+        entries.forEach((entry) => {
+          const key = normalizeKey(entry.name) || normalizeKey(entry.imageName);
+          if (key && preferredKeys.has(key)) return;
+          ordered.push(entry);
+        });
+
+        return ordered.slice(0, MAX_MANUFACTURERS);
       }
 
       function createImageElement(src, alt) {
@@ -607,7 +653,6 @@
         const normalizedManufacturers = manufacturers.map((entry) => ({
           ...entry,
           name: entry.name || trimExtension(entry.imageName),
-          catalogUrl: entry.catalogUrl || '',
         }));
 
         const normalizedMap = new Map(
@@ -641,18 +686,18 @@
             return {
               ...entry,
               folderId: entry.folderId || matched.folderId || '',
-              catalogUrl: entry.catalogUrl || matched.catalogUrl || '',
             };
           });
         while (paddedManufacturers.length < MAX_MANUFACTURERS) {
-          paddedManufacturers.push({ name: '未設定', imageUrl: '', imageName: '', catalogUrl: '', folderId: '' });
+          paddedManufacturers.push({ name: '未設定', imageUrl: '', imageName: '', folderId: '' });
         }
 
-        const manufacturerEntries = paddedManufacturers.map((makerEntry) => {
+        const orderedManufacturers = enforcePreferredOrder(paddedManufacturers);
+
+        const manufacturerEntries = orderedManufacturers.map((makerEntry) => {
           const name = getMakerDisplayName(makerEntry);
           const isKirin = /キリン/.test(name);
           const isAsahi = /アサヒ/.test(name);
-          const catalogUrl = makerEntry.catalogUrl || '';
 
           return {
             name,
@@ -662,9 +707,6 @@
               className: isKirin ? 'status-allow' : 'status-deny',
             },
             note: isAsahi ? '※設置できない可能性あり' : '',
-            catalogLink: catalogUrl
-              ? { href: catalogUrl, text: 'カタログ' }
-              : '準備中',
           };
         });
 
@@ -717,7 +759,6 @@
         const tbody = document.createElement('tbody');
         const rows = [
           { label: '商品カスタマイズ', accessor: (entry) => entry.customStatus },
-          { label: 'カタログ', accessor: (entry) => entry.catalogLink, cellClass: 'lineup-text' },
           { label: '備考', accessor: (entry) => entry.note },
         ];
 
