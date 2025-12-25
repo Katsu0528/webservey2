@@ -659,12 +659,12 @@
       const manufacturer = (data && data.manufacturer) || maker || '';
       const categories = (data && data.categories) || [];
       const manufacturers = (data && data.manufacturers) || [];
-      const extraCatalogLinks = [
-        { href: 'https://drive.google.com/file/d/1uMHmR0DJm7OMKq9Qqh-eOs_5ezP2HHY_/view?usp=sharing', text: 'カタログ1' },
-        { href: 'https://drive.google.com/file/d/1omU2GbhqJlPQ_6RslD-DPa0NO_aJplsK/view?usp=sharing', text: 'カタログ2' },
-        { href: 'https://drive.google.com/file/d/1Y0hQLd3C-9q75exTyQYwQDjMVHNYm-UK/view?usp=sharing', text: 'カタログ3' },
-        { href: 'https://drive.google.com/file/d/1pzSG-GG5S_y7Lq_wXhgaFPwbkQ_Ove2C/view?usp=sharing', text: 'カタログ4' },
-      ];
+        const extraCatalogLinks = [
+          { href: 'https://drive.google.com/file/d/1uMHmR0DJm7OMKq9Qqh-eOs_5ezP2HHY_/view?usp=sharing', text: '商品一覧' },
+          { href: 'https://drive.google.com/file/d/1omU2GbhqJlPQ_6RslD-DPa0NO_aJplsK/view?usp=sharing', text: '商品一覧' },
+          { href: 'https://drive.google.com/file/d/1Y0hQLd3C-9q75exTyQYwQDjMVHNYm-UK/view?usp=sharing', text: '商品一覧' },
+          { href: 'https://drive.google.com/file/d/1pzSG-GG5S_y7Lq_wXhgaFPwbkQ_Ove2C/view?usp=sharing', text: '商品一覧' },
+        ];
 
       const allItems = categories.flatMap((category) => {
         if (!category.items || !category.items.length) return [];
