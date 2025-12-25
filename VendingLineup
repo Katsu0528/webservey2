@@ -688,7 +688,7 @@
 
         container.innerHTML = '';
         renderQuestionTwoSection();
-        applySurveyHeaders(`${QUESTION1_DESCRIPTION} ${LINEUP_INSTRUCTION}`);
+        applySurveyHeaders(LINEUP_INSTRUCTION);
 
         const section = document.createElement('section');
         section.className = 'block';
@@ -699,7 +699,6 @@
           <div>
             <p class="eyebrow">質問１</p>
             <h2>メーカー一覧と商品ラインアップ</h2>
-            <p class="section-lead">${QUESTION1_DESCRIPTION}</p>
             <p class="note">${LINEUP_INSTRUCTION}</p>
           </div>
         `;
