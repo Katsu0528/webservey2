@@ -255,6 +255,13 @@
         padding-bottom: 6px;
       }
 
+      @media (min-width: 768px) {
+        .image-grid::before {
+          content: '';
+          flex: 0 0 152px;
+        }
+      }
+
       .image-grid figcaption {
         font-size: 13px;
         margin-top: 6px;
@@ -271,8 +278,8 @@
         display: flex;
         flex-direction: column;
         gap: 8px;
-        flex: 0 0 240px;
-        width: 240px;
+        flex: 0 0 220px;
+        width: 220px;
         cursor: pointer;
         transition: 0.18s ease;
         box-shadow: 0 10px 20px rgba(61, 78, 255, 0.06);
