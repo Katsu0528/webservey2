@@ -168,11 +168,10 @@ function getImageUrl(file) {
 
 /**
  * アンケートの回答をスプレッドシートに保存する。
- * @param {string} email メールアドレス
  * @param {string} question1Answer 質問1の回答
  * @param {string} question2Answer 質問2の回答
  */
-function submitSurveyResponse(email, question1Answer, question2Answer) {
+function submitSurveyResponse(question1Answer, question2Answer) {
   if (!SURVEY_SPREADSHEET_ID) {
     throw new Error('集計先のスプレッドシート ID が設定されていません。');
   }
@@ -182,6 +181,8 @@ function submitSurveyResponse(email, question1Answer, question2Answer) {
   if (!sheet) {
     throw new Error('集計シートが見つかりません。');
   }
+
+  var email = Session.getActiveUser().getEmail();
 
   sheet.appendRow([new Date(), email || '', question1Answer || '', question2Answer || '']);
 }
