@@ -213,6 +213,27 @@ function getCatalogLinkMap() {
     var catalogRoot = DriveApp.getFolderById(DEFAULT_CATALOG_FOLDER_ID);
     var catalogMap = {};
 
+    var ensurePublicFolderUrl = function (folder) {
+      var id = folder && folder.getId && folder.getId();
+      if (!id) return '';
+
+      try {
+        var access = folder.getSharingAccess();
+        var permission = folder.getSharingPermission();
+        var isPublic =
+          access === DriveApp.Access.ANYONE_WITH_LINK &&
+          permission === DriveApp.Permission.VIEW;
+
+        if (!isPublic) {
+          folder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        }
+      } catch (err) {
+        Logger.log('カタログフォルダの公開設定変更に失敗しました: ' + err.message);
+      }
+
+      return 'https://drive.google.com/drive/folders/' + id + '?usp=drivesdk';
+    };
+
     var ensurePublicUrl = function (file) {
       var id = file && file.getId && file.getId();
       if (!id) return '';
@@ -234,9 +255,10 @@ function getCatalogLinkMap() {
       return 'https://drive.google.com/file/d/' + id + '/view?usp=drivesdk';
     };
 
-    var assignIfEmpty = function (key, file) {
+    var assignIfEmpty = function (key, fileOrUrl) {
       if (!key || catalogMap[key]) return;
-      catalogMap[key] = ensurePublicUrl(file);
+      catalogMap[key] =
+        typeof fileOrUrl === 'string' ? fileOrUrl : ensurePublicUrl(fileOrUrl);
     };
 
     var rootFiles = catalogRoot.getFiles();
@@ -248,10 +270,7 @@ function getCatalogLinkMap() {
     var subfolders = catalogRoot.getFolders();
     while (subfolders.hasNext()) {
       var folder = subfolders.next();
-      var files = folder.getFiles();
-      if (files.hasNext()) {
-        assignIfEmpty(trimExtension(folder.getName()), files.next());
-      }
+      assignIfEmpty(trimExtension(folder.getName()), ensurePublicFolderUrl(folder));
     }
 
     return catalogMap;
