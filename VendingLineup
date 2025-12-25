@@ -412,7 +412,7 @@
     <div class="page">
       <header class="hero">
         <div class="hero-badges">
-          <span class="pill alt">１つ選ぶだけ</span>
+          <span class="pill alt">１つ選んでください！</span>
         </div>
         <h1 id="pageTitle"></h1>
         <p id="pageLead" class="lead"></p>
@@ -427,9 +427,8 @@
   const folderIdFromTemplate = <?!= JSON.stringify(folderId || '') ?>;
 
   const SURVEY_TITLE = '新オフィスの自販機を皆さんの投票で決めます！';
-  const QUESTION1_DESCRIPTION = 'メーカー一覧と全商品を一体化しました。好きなメーカーを一つ選んでください。';
   const LINEUP_INSTRUCTION =
-    '４つの代表的な縦長画像をタップして気になるメーカーを選べます。シンプルな表でラインアップも確認してください。';
+    '商品一覧を確認して、新オフィスに置きたい自販機メーカーを一つ選んでください。';
   const QUESTION2_DESCRIPTION =
     'オフィスの自販機に「これは絶対に欲しい！」という飲み物やカテゴリがあれば、自由にご記入ください。';
 
@@ -583,7 +582,7 @@
         <p class="lead">${QUESTION2_DESCRIPTION}</p>
       </div>
       <div class="question-two-body">
-        <textarea placeholder="欲しい商品やカテゴリを自由にご記入ください"></textarea>
+        <textarea placeholder="欲しい商品やご要望を自由にご記入ください"></textarea>
         <p class="status-message" aria-live="polite"></p>
         <div class="question-two-actions">
           <button type="button">送信</button>
@@ -733,7 +732,7 @@
             text: isKirin ? '可能' : '不可(販売会社決定)',
             className: isKirin ? 'status-allow' : 'status-deny',
           },
-          note: isAsahi ? '※設置できない可能性あり' : '',
+          note: isAsahi ? '※交渉次第' : '',
           catalogLink: catalogUrl
             ? { href: catalogUrl, text: 'カタログを見る' }
             : '',
