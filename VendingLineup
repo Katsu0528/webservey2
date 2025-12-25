@@ -339,8 +339,3 @@ function getImageUrl(file) {
   return 'https://lh3.googleusercontent.com/d/' + id;
 }
 
-function submitSurveyResponse(question1Answer, question2Answer) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('回答'); // シート名は合わせてね
-  sheet.appendRow([new Date(), question1Answer || '', question2Answer || '']);
-  return true;
-}
