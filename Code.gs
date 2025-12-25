@@ -108,6 +108,7 @@ function getManufacturers() {
     var folders = root.getFolders();
     var manufacturers = [];
     var catalogMap = getCatalogMap();
+    var catalogFallbackUrl = getCatalogFallbackUrl();
 
     while (folders.hasNext()) {
       var folder = folders.next();
@@ -118,7 +119,9 @@ function getManufacturers() {
         folderId: folder.getId(),
         imageUrl: firstImage.url,
         imageName: firstImage.name,
-        catalogUrl: normalizedKey && catalogMap[normalizedKey] ? catalogMap[normalizedKey] : '',
+        catalogUrl:
+          (normalizedKey && catalogMap[normalizedKey] ? catalogMap[normalizedKey] : '') ||
+          catalogFallbackUrl,
       });
     }
 
@@ -188,6 +191,15 @@ function getCatalogMap() {
   } catch (err) {
     throw new Error('カタログの取得に失敗しました: ' + err.message);
   }
+}
+
+/**
+ * カタログが見つからない場合に利用するフォルダのリンクを返す。
+ * @returns {string}
+ */
+function getCatalogFallbackUrl() {
+  if (!DEFAULT_CATALOG_FOLDER_ID) return '';
+  return 'https://drive.google.com/drive/folders/' + DEFAULT_CATALOG_FOLDER_ID;
 }
 
 /**
@@ -268,15 +280,35 @@ function trimExtension(name) {
  * @returns {string}
  */
 function getFirstImageInfo(folder) {
-  var files = folder.getFiles();
-  if (files.hasNext()) {
-    var file = files.next();
+  var file = findFirstFileRecursively(folder);
+  if (file) {
     return {
       url: getImageUrl(file),
       name: file.getName(),
     };
   }
   return { url: '', name: '' };
+}
+
+/**
+ * フォルダ配下から最初に見つかったファイルを再帰的に取得する。
+ * @param {GoogleAppsScript.Drive.Folder} folder
+ * @returns {GoogleAppsScript.Drive.File|null}
+ */
+function findFirstFileRecursively(folder) {
+  var files = folder.getFiles();
+  if (files.hasNext()) {
+    return files.next();
+  }
+
+  var subfolders = folder.getFolders();
+  while (subfolders.hasNext()) {
+    var subfolder = subfolders.next();
+    var found = findFirstFileRecursively(subfolder);
+    if (found) return found;
+  }
+
+  return null;
 }
 
 /**
