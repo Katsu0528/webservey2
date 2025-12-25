@@ -609,6 +609,12 @@
         const manufacturer = (data && data.manufacturer) || maker || '';
         const categories = (data && data.categories) || [];
         const manufacturers = (data && data.manufacturers) || [];
+        const extraCatalogLinks = [
+          { href: 'https://drive.google.com/file/d/1uMHmR0DJm7OMKq9Qqh-eOs_5ezP2HHY_/view?usp=sharing', text: 'カタログ1' },
+          { href: 'https://drive.google.com/file/d/1omU2GbhqJlPQ_6RslD-DPa0NO_aJplsK/view?usp=sharing', text: 'カタログ2' },
+          { href: 'https://drive.google.com/file/d/1Y0hQLd3C-9q75exTyQYwQDjMVHNYm-UK/view?usp=sharing', text: 'カタログ3' },
+          { href: 'https://drive.google.com/file/d/1pzSG-GG5S_y7Lq_wXhgaFPwbkQ_Ove2C/view?usp=sharing', text: 'カタログ4' },
+        ];
 
         const allItems = categories.flatMap((category) => {
           if (!category.items || !category.items.length) return [];
@@ -738,6 +744,22 @@
           heading.scope = 'row';
           heading.textContent = row.label;
           tr.appendChild(heading);
+
+          if (row.label === 'カタログ') {
+            extraCatalogLinks.forEach((link) => {
+              const td = document.createElement('td');
+              const anchor = document.createElement('a');
+              anchor.href = link.href;
+              anchor.textContent = link.text;
+              anchor.target = '_blank';
+              anchor.rel = 'noopener noreferrer';
+              td.appendChild(anchor);
+              if (row.cellClass) {
+                td.classList.add(row.cellClass);
+              }
+              tr.appendChild(td);
+            });
+          }
 
           manufacturerEntries.forEach((entry) => {
             const td = document.createElement('td');
