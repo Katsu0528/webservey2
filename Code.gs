@@ -168,11 +168,10 @@ function getImageUrl(file) {
 
 /**
  * アンケートの回答をスプレッドシートに保存する。
- * @param {string} email メールアドレス
  * @param {string} question1Answer 質問1の回答
  * @param {string} question2Answer 質問2の回答
  */
-function submitSurveyResponse(email, question1Answer, question2Answer) {
+function submitSurveyResponse(question1Answer, question2Answer) {
   if (!SURVEY_SPREADSHEET_ID) {
     throw new Error('集計先のスプレッドシート ID が設定されていません。');
   }
@@ -183,5 +182,28 @@ function submitSurveyResponse(email, question1Answer, question2Answer) {
     throw new Error('集計シートが見つかりません。');
   }
 
+  var email = getUserEmail();
+
   sheet.appendRow([new Date(), email || '', question1Answer || '', question2Answer || '']);
+}
+
+/**
+ * 現在ログインしているユーザーのメールアドレスを内部的に取得する。
+ * Apps Script の実行権限に応じて ActiveUser または EffectiveUser を参照する。
+ * @returns {string}
+ */
+function getUserEmail() {
+  var active = Session.getActiveUser();
+  if (active) {
+    var email = active.getEmail();
+    if (email) return email;
+  }
+
+  var effective = Session.getEffectiveUser();
+  if (effective) {
+    var effectiveEmail = effective.getEmail();
+    if (effectiveEmail) return effectiveEmail;
+  }
+
+  return '';
 }

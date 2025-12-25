@@ -542,10 +542,6 @@
             <p class="lead">${QUESTION2_DESCRIPTION}</p>
           </div>
           <div class="question-two-body">
-            <label>
-              メールアドレス
-              <input type="email" placeholder="survey@example.com" />
-            </label>
             <textarea placeholder="欲しい商品やカテゴリを自由にご記入ください"></textarea>
             <p class="status-message" aria-live="polite"></p>
             <div class="question-two-actions">
@@ -555,7 +551,6 @@
         `;
 
         const textarea = questionTwo.querySelector('textarea');
-        const emailInput = questionTwo.querySelector('input[type="email"]');
         const submitButton = questionTwo.querySelector('button');
         const statusElement = questionTwo.querySelector('.status-message');
 
@@ -565,15 +560,8 @@
         };
 
         submitButton.addEventListener('click', () => {
-          const email = (emailInput.value || '').trim();
           const question2Answer = (textarea.value || '').trim();
           const question1Answer = selectedMakerName || '';
-
-          if (!email) {
-            setStatus('メールアドレスを入力してください。', true);
-            emailInput.focus();
-            return;
-          }
 
           if (!question1Answer) {
             setStatus('質問１の回答を選択してください。', true);
@@ -593,7 +581,7 @@
               setStatus(`送信に失敗しました。${err && err.message ? err.message : ''}`, true);
               submitButton.disabled = false;
             })
-            .submitSurveyResponse(email, question1Answer, question2Answer);
+            .submitSurveyResponse(question1Answer, question2Answer);
         });
       }
 
