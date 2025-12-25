@@ -382,7 +382,7 @@
       }
 
       .lineup-text {
-        text-align: left;
+        text-align: right;
         color: #2f3345;
         line-height: 1.5;
         font-size: 13px;
@@ -735,7 +735,7 @@
           note: isAsahi ? '※設置できない可能性あり' : '',
           catalogLink: catalogUrl
             ? { href: catalogUrl, text: 'カタログを見る' }
-            : '準備中',
+            : '',
         };
       });
 
@@ -813,35 +813,16 @@
             if (row.cellClass) td.classList.add(row.cellClass);
             tr.appendChild(td);
           });
-        } else if (extraCatalogLinks.length) {
-          extraCatalogLinks.forEach(() => {
-            const td = document.createElement('td');
-            if (row.cellClass) td.classList.add(row.cellClass);
-            tr.appendChild(td);
-          });
+
+          tbody.appendChild(tr);
+          return;
         }
 
         manufacturerEntries.forEach((entry) => {
           const td = document.createElement('td');
           const value = row.accessor(entry);
 
-          if (row.label === 'カタログ') {
-            const href =
-              (value && typeof value === 'object' && value.href) ||
-              (typeof value === 'string' && isHttpUrl(value) ? value : '');
-            const linkText = (value && typeof value === 'object' && value.text) || 'カタログを見る';
-
-            if (href) {
-              const link = document.createElement('a');
-              link.href = href;
-              link.textContent = linkText;
-              link.target = '_blank';
-              link.rel = 'noopener noreferrer';
-              td.appendChild(link);
-            } else {
-              td.textContent = (value && typeof value === 'object' ? value.text : value) || '';
-            }
-          } else if (value && typeof value === 'object') {
+          if (value && typeof value === 'object') {
             if (value.href) {
               const link = document.createElement('a');
               link.href = value.href;
