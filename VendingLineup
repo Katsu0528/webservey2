@@ -422,418 +422,468 @@
     </div>
 
     <script>
-      const makerFromTemplate = <?!= JSON.stringify(maker || '') ?>;
-      const folderIdFromTemplate = <?!= JSON.stringify(folderId || '') ?>;
+  const makerFromTemplate = <?!= JSON.stringify(maker || '') ?>;
+  const folderIdFromTemplate = <?!= JSON.stringify(folderId || '') ?>;
 
-      const SURVEY_TITLE = '新オフィスの自販機を皆さんの投票で決めます！';
-      const QUESTION1_DESCRIPTION = 'メーカー一覧と全商品を一体化しました。好きなメーカーを一つ選んでください。';
-      const LINEUP_INSTRUCTION =
-        '４つの代表的な縦長画像をタップして気になるメーカーを選べます。シンプルな表でラインアップも確認してください。';
-      const QUESTION2_DESCRIPTION =
-        'オフィスの自販機に「これは絶対に欲しい！」という飲み物やカテゴリがあれば、自由にご記入ください。';
+  const SURVEY_TITLE = '新オフィスの自販機を皆さんの投票で決めます！';
+  const QUESTION1_DESCRIPTION = 'メーカー一覧と全商品を一体化しました。好きなメーカーを一つ選んでください。';
+  const LINEUP_INSTRUCTION =
+    '４つの代表的な縦長画像をタップして気になるメーカーを選べます。シンプルな表でラインアップも確認してください。';
+  const QUESTION2_DESCRIPTION =
+    'オフィスの自販機に「これは絶対に欲しい！」という飲み物やカテゴリがあれば、自由にご記入ください。';
 
-      const FALLBACK_IMAGE =
-        'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="360" height="240" viewBox="0 0 360 240"><rect width="360" height="240" fill="%23f2f4f7"/><rect x="30" y="30" width="300" height="180" rx="12" fill="none" stroke="%23c3cad4" stroke-width="8"/><path d="M96 166l48-58 48 58 48-72 24 32" fill="none" stroke="%23c3cad4" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><circle cx="138" cy="90" r="22" fill="%23d8dde5"/></svg>';
+  const FALLBACK_IMAGE =
+    'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="360" height="240" viewBox="0 0 360 240"><rect width="360" height="240" fill="%23f2f4f7"/><rect x="30" y="30" width="300" height="180" rx="12" fill="none" stroke="%23c3cad4" stroke-width="8"/><path d="M96 166l48-58 48 58 48-72 24 32" fill="none" stroke="%23c3cad4" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><circle cx="138" cy="90" r="22" fill="%23d8dde5"/></svg>';
 
-      const MAX_TABLE_COLUMNS = 5;
-      const MAX_MANUFACTURERS = MAX_TABLE_COLUMNS - 1;
+  const MAX_TABLE_COLUMNS = 5;
+  const MAX_MANUFACTURERS = MAX_TABLE_COLUMNS - 1;
 
-      const params = new URLSearchParams(window.location.search);
-      const maker = params.get('maker') || makerFromTemplate || '';
-      const folderId = params.get('folderId') || folderIdFromTemplate || '';
+  const params = new URLSearchParams(window.location.search);
+  const maker = params.get('maker') || makerFromTemplate || '';
+  const folderId = params.get('folderId') || folderIdFromTemplate || '';
 
-      let selectedMakerName = maker || '';
+  let selectedMakerName = maker || '';
 
-      function buildCatalogUrl(makerName, folderId) {
-        if (!folderId) return '';
+  function isHttpUrl(value) {
+    if (!value) return false;
+    const v = String(value).trim();
+    return v.startsWith('http://') || v.startsWith('https://');
+  }
 
-        const url = new URL(window.location.href);
-        url.search = '';
-        url.hash = '';
-        url.searchParams.set('maker', makerName || '');
-        url.searchParams.set('folderId', folderId);
-        return url.toString();
+  function buildCatalogUrl(makerName, folderId) {
+    if (!folderId) return '';
+    const url = new URL(window.location.href);
+    // 既存パラメータは消さずに maker/folderId だけ上書きする（リンク追加で壊れにくくする）
+    url.searchParams.set('maker', makerName || '');
+    url.searchParams.set('folderId', folderId);
+    return url.toString();
+  }
+
+  // 正規表現なしで Drive URL / ID を embeddable に変換
+  function toEmbeddableUrl(src) {
+    if (!src) return '';
+
+    // IDだけ渡された場合
+    if (!isHttpUrl(src)) {
+      return 'https://lh3.googleusercontent.com/d/' + String(src).trim();
+    }
+
+    let urlObj;
+    try {
+      urlObj = new URL(src);
+    } catch (e) {
+      return src;
+    }
+
+    // すでに googleusercontent の場合はそのまま
+    if (urlObj.hostname.includes('googleusercontent.com')) {
+      return src;
+    }
+
+    // query id=xxxx
+    const idFromQuery = urlObj.searchParams.get('id');
+    if (idFromQuery) {
+      return 'https://lh3.googleusercontent.com/d/' + idFromQuery;
+    }
+
+    // /file/d/{id}/view
+    // /d/{id}/...
+    const path = urlObj.pathname || '';
+    const parts = path.split('/').filter(Boolean);
+
+    // パスからIDを拾う（/d/ の次、または /file/d/ の次）
+    for (let i = 0; i < parts.length - 1; i++) {
+      if (parts[i] === 'd' && parts[i + 1]) {
+        return 'https://lh3.googleusercontent.com/d/' + parts[i + 1];
       }
-
-      function toEmbeddableUrl(src) {
-        if (!src) return '';
-
-        // If only an ID is passed, return the embeddable URL directly.
-        if (!/^https?:\/\//i.test(src)) {
-          return 'https://lh3.googleusercontent.com/d/' + src;
-        }
-
-        // Normalize common Drive share URLs to the embeddable googleusercontent format.
-        const idMatch = src.match(/(?:\/d\/|id=)([\w-]{10,})/);
-        if (idMatch && idMatch[1]) {
-          return 'https://lh3.googleusercontent.com/d/' + idMatch[1];
-        }
-
-        return src;
-      }
-
-      function trimExtension(name) {
-        if (!name) return '';
-        const lastDotIndex = name.lastIndexOf('.');
-        if (lastDotIndex <= 0) return name;
-        return name.slice(0, lastDotIndex);
-      }
-
-      function getMakerDisplayName(entry) {
-        return entry.name || trimExtension(entry.imageName) || 'メーカー未設定';
-      }
-
-      function createImageElement(src, alt) {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'media-frame';
-
-        const img = document.createElement('img');
-        img.loading = 'lazy';
-        img.alt = alt || '商品画像';
-        img.referrerPolicy = 'no-referrer';
-
-        const applyFallback = () => {
-          img.onerror = null;
-          img.src = FALLBACK_IMAGE;
-        };
-
-        img.onerror = applyFallback;
-        img.src = toEmbeddableUrl(src) || FALLBACK_IMAGE;
-
-        wrapper.appendChild(img);
-        return wrapper;
-      }
-
-      function enableImageSelection(imageGrid, onSelect) {
-        const cards = Array.from(imageGrid.querySelectorAll('.image-card'));
-        if (!cards.length) return;
-
-        const applySelection = (selectedCard, shouldNotify = true) => {
-          cards.forEach((card) => {
-            const isSelected = card === selectedCard;
-            card.classList.toggle('selected', isSelected);
-            card.classList.toggle('dimmed', !!selectedCard && !isSelected);
-            card.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
-            if (isSelected && shouldNotify && typeof onSelect === 'function') {
-              onSelect(card.dataset.makerName || '');
-            }
-          });
-        };
-
-        cards.forEach((card) => {
-          const selectCard = () => applySelection(card);
-
-          card.addEventListener('click', selectCard);
-          card.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter' || event.key === ' ') {
-              event.preventDefault();
-              selectCard();
-            }
-          });
-        });
-
-        const initialCard =
-          cards.find((card) => (card.dataset.makerName || '') === maker) || cards[0];
-        if (initialCard) {
-          applySelection(initialCard, true);
-        }
-      }
-
-      function renderQuestionTwoSection() {
-        const questionTwo = document.getElementById('question2Section');
-        questionTwo.className = 'block question-two';
-        questionTwo.innerHTML = `
-          <div>
-            <p class="eyebrow">質問２</p>
-            <h2>欲しいドリンクやカテゴリ</h2>
-            <p class="lead">${QUESTION2_DESCRIPTION}</p>
-          </div>
-          <div class="question-two-body">
-            <textarea placeholder="欲しい商品やカテゴリを自由にご記入ください"></textarea>
-            <p class="status-message" aria-live="polite"></p>
-            <div class="question-two-actions">
-              <button type="button">送信</button>
-            </div>
-          </div>
-        `;
-
-        const textarea = questionTwo.querySelector('textarea');
-        const submitButton = questionTwo.querySelector('button');
-        const statusElement = questionTwo.querySelector('.status-message');
-
-        const setStatus = (message, isError) => {
-          statusElement.textContent = message || '';
-          statusElement.classList.toggle('error', !!isError);
-        };
-
-        submitButton.addEventListener('click', () => {
-          const question2Answer = (textarea.value || '').trim();
-          const question1Answer = selectedMakerName || '';
-
-          if (!question1Answer) {
-            setStatus('質問１の回答を選択してください。', true);
-            return;
-          }
-
-          submitButton.disabled = true;
-          setStatus('送信中です...', false);
-
-          google.script.run
-            .withSuccessHandler(() => {
-              setStatus('送信しました。ご協力ありがとうございます！');
-              textarea.value = '';
-              submitButton.disabled = false;
-            })
-            .withFailureHandler((err) => {
-              setStatus(`送信に失敗しました。${err && err.message ? err.message : ''}`, true);
-              submitButton.disabled = false;
-            })
-            .submitSurveyResponse(question1Answer, question2Answer);
-        });
-      }
-
-      function applySurveyHeaders(leadText) {
-        document.getElementById('pageTitle').textContent = SURVEY_TITLE;
-        document.getElementById('pageLead').textContent = leadText || QUESTION1_DESCRIPTION;
-      }
-
-      document.addEventListener('DOMContentLoaded', function () {
-        google.script.run
-          .withSuccessHandler(renderLineup)
-          .withFailureHandler(showError)
-          .getVendingLineup(maker, folderId);
-      });
-
-      function renderLineup(data) {
-        try {
-          const container = document.getElementById('lineupContainer');
-          const manufacturer = (data && data.manufacturer) || maker || '';
-          const categories = (data && data.categories) || [];
-          const manufacturers = (data && data.manufacturers) || [];
-          const extraCatalogLinks = [
-            { href: 'https://drive.google.com/file/d/1uMHmR0DJm7OMKq9Qqh-eOs_5ezP2HHY_/view?usp=sharing', text: 'カタログ1' },
-            { href: 'https://drive.google.com/file/d/1omU2GbhqJlPQ_6RslD-DPa0NO_aJplsK/view?usp=sharing', text: 'カタログ2' },
-            { href: 'https://drive.google.com/file/d/1Y0hQLd3C-9q75exTyQYwQDjMVHNYm-UK/view?usp=sharing', text: 'カタログ3' },
-            { href: 'https://drive.google.com/file/d/1pzSG-GG5S_y7Lq_wXhgaFPwbkQ_Ove2C/view?usp=sharing', text: 'カタログ4' },
-          ];
-
-        const allItems = categories.flatMap((category) => {
-          if (!category.items || !category.items.length) return [];
-          return category.items.map((item) => ({ ...item, category: category.name || 'カテゴリ未設定' }));
-        });
-
-        const normalizedManufacturers = manufacturers.map((entry) => ({
-          ...entry,
-          name: entry.name || trimExtension(entry.imageName),
-          catalogUrl: buildCatalogUrl(entry.name || trimExtension(entry.imageName), entry.folderId),
-        }));
-
-        const normalizedMap = new Map(
-          normalizedManufacturers.map((entry) => [getMakerDisplayName(entry), entry])
-        );
-
-        const folderBasedManufacturers = allItems.slice(0, MAX_MANUFACTURERS).map((item, index) => ({
-          name: trimExtension(item.name) || `画像${index + 1}`,
-          imageUrl: item.imageUrl || '',
-          imageName: item.name,
-        }));
-
-        const fallbackMaker = {
-          name: manufacturer || 'メーカー未設定',
-          imageUrl: (allItems[0] && allItems[0].imageUrl) || '',
-          imageName: (allItems[0] && allItems[0].name) || manufacturer,
-        };
-
-        const prioritizedManufacturers =
-          folderBasedManufacturers.length > 0
-            ? folderBasedManufacturers
-            : normalizedManufacturers.length > 0
-            ? normalizedManufacturers
-            : [fallbackMaker];
-
-        const paddedManufacturers = prioritizedManufacturers
-          .slice(0, MAX_MANUFACTURERS)
-          .map((entry) => {
-            const displayName = getMakerDisplayName(entry);
-            const matched = normalizedMap.get(displayName) || {};
-            return {
-              ...entry,
-              folderId: entry.folderId || matched.folderId || '',
-              catalogUrl: entry.catalogUrl || matched.catalogUrl || '',
-            };
-          });
-        while (paddedManufacturers.length < MAX_MANUFACTURERS) {
-          paddedManufacturers.push({ name: '未設定', imageUrl: '', imageName: '', catalogUrl: '', folderId: '' });
-        }
-
-        const manufacturerEntries = paddedManufacturers.map((makerEntry) => {
-          const name = getMakerDisplayName(makerEntry);
-          const isKirin = /キリン/.test(name);
-          const isAsahi = /アサヒ/.test(name);
-          const catalogUrl = makerEntry.catalogUrl || buildCatalogUrl(name, makerEntry.folderId);
-
-          return {
-            name,
-            imageUrl: makerEntry.imageUrl || '',
-            customStatus: {
-              text: isKirin ? '可能' : '不可(販売会社決定)',
-              className: isKirin ? 'status-allow' : 'status-deny',
-            },
-            note: isAsahi ? '※設置できない可能性あり' : '',
-            catalogLink: catalogUrl
-              ? { href: catalogUrl, text: 'カタログを見る' }
-              : '準備中',
-          };
-        });
-
-        container.innerHTML = '';
-        renderQuestionTwoSection();
-        applySurveyHeaders(`${QUESTION1_DESCRIPTION} ${LINEUP_INSTRUCTION}`);
-
-        const section = document.createElement('section');
-        section.className = 'block';
-
-        const sectionHeader = document.createElement('div');
-        sectionHeader.className = 'section-header';
-        sectionHeader.innerHTML = `
-          <div>
-            <p class="eyebrow">質問１</p>
-            <h2>メーカー一覧と商品ラインアップ</h2>
-            <p class="section-lead">${QUESTION1_DESCRIPTION}</p>
-            <p class="note">${LINEUP_INSTRUCTION}</p>
-          </div>
-        `;
-
-        section.appendChild(sectionHeader);
-
-        const imageGrid = document.createElement('div');
-        imageGrid.className = 'image-grid';
-        manufacturerEntries.forEach((makerEntry) => {
-          const displayName = makerEntry.name || 'メーカー未設定';
-          const figure = document.createElement('figure');
-          figure.className = 'image-card';
-          figure.tabIndex = 0;
-          figure.setAttribute('role', 'button');
-          figure.setAttribute('aria-pressed', 'false');
-          figure.dataset.makerName = displayName;
-          figure.appendChild(createImageElement(makerEntry.imageUrl, displayName));
-          const caption = document.createElement('figcaption');
-          caption.textContent = displayName;
-          figure.appendChild(caption);
-          imageGrid.appendChild(figure);
-        });
-        enableImageSelection(imageGrid, (name) => {
-          selectedMakerName = name;
-        });
-        section.appendChild(imageGrid);
-
-        const tableWrapper = document.createElement('div');
-        tableWrapper.className = 'table-wrapper';
-        const table = document.createElement('table');
-        table.className = 'lineup-table';
-
-        const tbody = document.createElement('tbody');
-        const rows = [
-          { label: '商品カスタマイズ', accessor: (entry) => entry.customStatus },
-          { label: 'カタログ', accessor: (entry) => entry.catalogLink, cellClass: 'lineup-text' },
-          { label: '備考', accessor: (entry) => entry.note },
-        ];
-
-        rows.forEach((row) => {
-          const tr = document.createElement('tr');
-          const heading = document.createElement('th');
-          heading.scope = 'row';
-          heading.textContent = row.label;
-          tr.appendChild(heading);
-
-          if (row.label === 'カタログ') {
-            extraCatalogLinks.forEach((link) => {
-              const td = document.createElement('td');
-              const anchor = document.createElement('a');
-              anchor.href = link.href;
-              anchor.textContent = link.text;
-              anchor.target = '_blank';
-              anchor.rel = 'noopener noreferrer';
-              td.appendChild(anchor);
-              if (row.cellClass) {
-                td.classList.add(row.cellClass);
-              }
-              tr.appendChild(td);
-            });
-          } else if (extraCatalogLinks.length) {
-            extraCatalogLinks.forEach(() => {
-              const td = document.createElement('td');
-              if (row.cellClass) {
-                td.classList.add(row.cellClass);
-              }
-              tr.appendChild(td);
-            });
-          }
-
-          manufacturerEntries.forEach((entry) => {
-            const td = document.createElement('td');
-            const value = row.accessor(entry);
-            if (row.label === 'カタログ') {
-              const href =
-                (value && typeof value === 'object' && value.href) ||
-                (typeof value === 'string' && /^https?:\/\//.test(value) ? value : '');
-              const linkText = (value && typeof value === 'object' && value.text) || 'カタログを見る';
-
-              if (href) {
-                const link = document.createElement('a');
-                link.href = href;
-                link.textContent = linkText;
-                link.target = '_blank';
-                link.rel = 'noopener noreferrer';
-                td.appendChild(link);
-              } else {
-                td.textContent = (value && typeof value === 'object' ? value.text : value) || '';
-              }
-            } else if (value && typeof value === 'object') {
-              if (value.href) {
-                const link = document.createElement('a');
-                link.href = value.href;
-                link.textContent = value.text || '詳細を見る';
-                link.target = '_blank';
-                link.rel = 'noopener noreferrer';
-                td.appendChild(link);
-              } else {
-                td.textContent = value.text || '';
-                if (value.className) {
-                  td.classList.add(value.className);
-                }
-              }
-            } else {
-              td.textContent = value || '';
-            }
-
-            if (row.cellClass) {
-              td.classList.add(row.cellClass);
-            }
-
-            tr.appendChild(td);
-          });
-
-          tbody.appendChild(tr);
-        });
-
-        table.appendChild(tbody);
-        tableWrapper.appendChild(table);
-        section.appendChild(tableWrapper);
-
-        container.appendChild(section);
-      } catch (err) {
-        console.error(err);
-        showError(err);
+      if (parts[i] === 'file' && parts[i + 1] === 'd' && parts[i + 2]) {
+        return 'https://lh3.googleusercontent.com/d/' + parts[i + 2];
       }
     }
 
-      function showError(err) {
-        const container = document.getElementById('lineupContainer');
-        container.innerHTML = `<section class="block"><div class="empty">商品情報の取得に失敗しました。${
-          err && err.message ? ` (詳細: ${err.message})` : ''
-        }</div></section>`;
+    // ここまで取れなければ元URLを返す
+    return src;
+  }
+
+  function trimExtension(name) {
+    if (!name) return '';
+    const lastDotIndex = name.lastIndexOf('.');
+    if (lastDotIndex <= 0) return name;
+    return name.slice(0, lastDotIndex);
+  }
+
+  function getMakerDisplayName(entry) {
+    return entry.name || trimExtension(entry.imageName) || 'メーカー未設定';
+  }
+
+  function createImageElement(src, alt) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'media-frame';
+
+    const img = document.createElement('img');
+    img.loading = 'lazy';
+    img.alt = alt || '商品画像';
+    img.referrerPolicy = 'no-referrer';
+
+    const applyFallback = () => {
+      img.onerror = null;
+      img.src = FALLBACK_IMAGE;
+    };
+
+    img.onerror = applyFallback;
+    img.src = toEmbeddableUrl(src) || FALLBACK_IMAGE;
+
+    wrapper.appendChild(img);
+    return wrapper;
+  }
+
+  function enableImageSelection(imageGrid, onSelect) {
+    const cards = Array.from(imageGrid.querySelectorAll('.image-card'));
+    if (!cards.length) return;
+
+    const applySelection = (selectedCard, shouldNotify = true) => {
+      cards.forEach((card) => {
+        const isSelected = card === selectedCard;
+        card.classList.toggle('selected', isSelected);
+        card.classList.toggle('dimmed', !!selectedCard && !isSelected);
+        card.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+        if (isSelected && shouldNotify && typeof onSelect === 'function') {
+          onSelect(card.dataset.makerName || '');
+        }
+      });
+    };
+
+    cards.forEach((card) => {
+      const selectCard = () => applySelection(card);
+
+      card.addEventListener('click', selectCard);
+      card.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          selectCard();
+        }
+      });
+    });
+
+    const initialCard =
+      cards.find((card) => (card.dataset.makerName || '') === maker) || cards[0];
+    if (initialCard) {
+      applySelection(initialCard, true);
+    }
+  }
+
+  function renderQuestionTwoSection() {
+    const questionTwo = document.getElementById('question2Section');
+    questionTwo.className = 'block question-two';
+    questionTwo.innerHTML = `
+      <div>
+        <p class="eyebrow">質問２</p>
+        <h2>欲しいドリンクやカテゴリ</h2>
+        <p class="lead">${QUESTION2_DESCRIPTION}</p>
+      </div>
+      <div class="question-two-body">
+        <textarea placeholder="欲しい商品やカテゴリを自由にご記入ください"></textarea>
+        <p class="status-message" aria-live="polite"></p>
+        <div class="question-two-actions">
+          <button type="button">送信</button>
+        </div>
+      </div>
+    `;
+
+    const textarea = questionTwo.querySelector('textarea');
+    const submitButton = questionTwo.querySelector('button');
+    const statusElement = questionTwo.querySelector('.status-message');
+
+    const setStatus = (message, isError) => {
+      statusElement.textContent = message || '';
+      statusElement.classList.toggle('error', !!isError);
+    };
+
+    submitButton.addEventListener('click', () => {
+      const question2Answer = (textarea.value || '').trim();
+      const question1Answer = selectedMakerName || '';
+
+      if (!question1Answer) {
+        setStatus('質問１の回答を選択してください。', true);
+        return;
       }
-    </script>
+
+      // google.script.run が無い環境（ローカルHTML等）ならメッセージ出して止める
+      if (!window.google || !google.script || !google.script.run) {
+        setStatus('送信できません（google.script.run が利用できない開き方です）。WebアプリURLで開いてください。', true);
+        return;
+      }
+
+      submitButton.disabled = true;
+      setStatus('送信中です...', false);
+
+      google.script.run
+        .withSuccessHandler(() => {
+          setStatus('送信しました。ご協力ありがとうございます！');
+          textarea.value = '';
+          submitButton.disabled = false;
+        })
+        .withFailureHandler((err) => {
+          setStatus(`送信に失敗しました。${err && err.message ? err.message : ''}`, true);
+          submitButton.disabled = false;
+        })
+        .submitSurveyResponse(question1Answer, question2Answer);
+    });
+  }
+
+  function applySurveyHeaders(leadText) {
+    document.getElementById('pageTitle').textContent = SURVEY_TITLE;
+    document.getElementById('pageLead').textContent = leadText || QUESTION1_DESCRIPTION;
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    // ✅ 先にヘッダーとQ2を必ず出す（失敗しても“ピルだけ”にならない）
+    applySurveyHeaders(`${QUESTION1_DESCRIPTION} ${LINEUP_INSTRUCTION}`);
+    renderQuestionTwoSection();
+
+    // ✅ Webアプリとして開けてない/previewで google.script.run が無い時に原因表示
+    if (!window.google || !google.script || !google.script.run) {
+      showError({ message: 'google.script.run がありません。GASのWebアプリ(/exec or /dev)として開けていない可能性があります。' });
+      return;
+    }
+
+    google.script.run
+      .withSuccessHandler(renderLineup)
+      .withFailureHandler(showError)
+      .getVendingLineup(maker, folderId);
+  });
+
+  function renderLineup(data) {
+    try {
+      const container = document.getElementById('lineupContainer');
+      const manufacturer = (data && data.manufacturer) || maker || '';
+      const categories = (data && data.categories) || [];
+      const manufacturers = (data && data.manufacturers) || [];
+      const extraCatalogLinks = [
+        { href: 'https://drive.google.com/file/d/1uMHmR0DJm7OMKq9Qqh-eOs_5ezP2HHY_/view?usp=sharing', text: 'カタログ1' },
+        { href: 'https://drive.google.com/file/d/1omU2GbhqJlPQ_6RslD-DPa0NO_aJplsK/view?usp=sharing', text: 'カタログ2' },
+        { href: 'https://drive.google.com/file/d/1Y0hQLd3C-9q75exTyQYwQDjMVHNYm-UK/view?usp=sharing', text: 'カタログ3' },
+        { href: 'https://drive.google.com/file/d/1pzSG-GG5S_y7Lq_wXhgaFPwbkQ_Ove2C/view?usp=sharing', text: 'カタログ4' },
+      ];
+
+      const allItems = categories.flatMap((category) => {
+        if (!category.items || !category.items.length) return [];
+        return category.items.map((item) => ({ ...item, category: category.name || 'カテゴリ未設定' }));
+      });
+
+      const normalizedManufacturers = manufacturers.map((entry) => ({
+        ...entry,
+        name: entry.name || trimExtension(entry.imageName),
+        catalogUrl: buildCatalogUrl(entry.name || trimExtension(entry.imageName), entry.folderId),
+      }));
+
+      const normalizedMap = new Map(
+        normalizedManufacturers.map((entry) => [getMakerDisplayName(entry), entry])
+      );
+
+      const folderBasedManufacturers = allItems.slice(0, MAX_MANUFACTURERS).map((item, index) => ({
+        name: trimExtension(item.name) || `画像${index + 1}`,
+        imageUrl: item.imageUrl || '',
+        imageName: item.name,
+      }));
+
+      const fallbackMaker = {
+        name: manufacturer || 'メーカー未設定',
+        imageUrl: (allItems[0] && allItems[0].imageUrl) || '',
+        imageName: (allItems[0] && allItems[0].name) || manufacturer,
+      };
+
+      const prioritizedManufacturers =
+        folderBasedManufacturers.length > 0
+          ? folderBasedManufacturers
+          : normalizedManufacturers.length > 0
+          ? normalizedManufacturers
+          : [fallbackMaker];
+
+      const paddedManufacturers = prioritizedManufacturers
+        .slice(0, MAX_MANUFACTURERS)
+        .map((entry) => {
+          const displayName = getMakerDisplayName(entry);
+          const matched = normalizedMap.get(displayName) || {};
+          return {
+            ...entry,
+            folderId: entry.folderId || matched.folderId || '',
+            catalogUrl: entry.catalogUrl || matched.catalogUrl || '',
+          };
+        });
+
+      while (paddedManufacturers.length < MAX_MANUFACTURERS) {
+        paddedManufacturers.push({ name: '未設定', imageUrl: '', imageName: '', catalogUrl: '', folderId: '' });
+      }
+
+      const manufacturerEntries = paddedManufacturers.map((makerEntry) => {
+        const name = getMakerDisplayName(makerEntry);
+
+        // ✅ 正規表現を使わず文字列判定
+        const isKirin = name.includes('キリン');
+        const isAsahi = name.includes('アサヒ');
+
+        const catalogUrl = makerEntry.catalogUrl || buildCatalogUrl(name, makerEntry.folderId);
+
+        return {
+          name,
+          imageUrl: makerEntry.imageUrl || '',
+          customStatus: {
+            text: isKirin ? '可能' : '不可(販売会社決定)',
+            className: isKirin ? 'status-allow' : 'status-deny',
+          },
+          note: isAsahi ? '※設置できない可能性あり' : '',
+          catalogLink: catalogUrl
+            ? { href: catalogUrl, text: 'カタログを見る' }
+            : '準備中',
+        };
+      });
+
+      container.innerHTML = '';
+      applySurveyHeaders(`${QUESTION1_DESCRIPTION} ${LINEUP_INSTRUCTION}`);
+
+      const section = document.createElement('section');
+      section.className = 'block';
+
+      const sectionHeader = document.createElement('div');
+      sectionHeader.className = 'section-header';
+      sectionHeader.innerHTML = `
+        <div>
+          <p class="eyebrow">質問１</p>
+          <h2>メーカー一覧と商品ラインアップ</h2>
+          <p class="section-lead">${QUESTION1_DESCRIPTION}</p>
+          <p class="note">${LINEUP_INSTRUCTION}</p>
+        </div>
+      `;
+      section.appendChild(sectionHeader);
+
+      const imageGrid = document.createElement('div');
+      imageGrid.className = 'image-grid';
+
+      manufacturerEntries.forEach((makerEntry) => {
+        const displayName = makerEntry.name || 'メーカー未設定';
+        const figure = document.createElement('figure');
+        figure.className = 'image-card';
+        figure.tabIndex = 0;
+        figure.setAttribute('role', 'button');
+        figure.setAttribute('aria-pressed', 'false');
+        figure.dataset.makerName = displayName;
+        figure.appendChild(createImageElement(makerEntry.imageUrl, displayName));
+        const caption = document.createElement('figcaption');
+        caption.textContent = displayName;
+        figure.appendChild(caption);
+        imageGrid.appendChild(figure);
+      });
+
+      enableImageSelection(imageGrid, (name) => {
+        selectedMakerName = name;
+      });
+
+      section.appendChild(imageGrid);
+
+      const tableWrapper = document.createElement('div');
+      tableWrapper.className = 'table-wrapper';
+
+      const table = document.createElement('table');
+      table.className = 'lineup-table';
+
+      const tbody = document.createElement('tbody');
+      const rows = [
+        { label: '商品カスタマイズ', accessor: (entry) => entry.customStatus },
+        { label: 'カタログ', accessor: (entry) => entry.catalogLink, cellClass: 'lineup-text' },
+        { label: '備考', accessor: (entry) => entry.note },
+      ];
+
+      rows.forEach((row) => {
+        const tr = document.createElement('tr');
+        const heading = document.createElement('th');
+        heading.scope = 'row';
+        heading.textContent = row.label;
+        tr.appendChild(heading);
+
+        if (row.label === 'カタログ') {
+          extraCatalogLinks.forEach((link) => {
+            const td = document.createElement('td');
+            const anchor = document.createElement('a');
+            anchor.href = link.href;
+            anchor.textContent = link.text;
+            anchor.target = '_blank';
+            anchor.rel = 'noopener noreferrer';
+            td.appendChild(anchor);
+            if (row.cellClass) td.classList.add(row.cellClass);
+            tr.appendChild(td);
+          });
+        } else if (extraCatalogLinks.length) {
+          extraCatalogLinks.forEach(() => {
+            const td = document.createElement('td');
+            if (row.cellClass) td.classList.add(row.cellClass);
+            tr.appendChild(td);
+          });
+        }
+
+        manufacturerEntries.forEach((entry) => {
+          const td = document.createElement('td');
+          const value = row.accessor(entry);
+
+          if (row.label === 'カタログ') {
+            const href =
+              (value && typeof value === 'object' && value.href) ||
+              (typeof value === 'string' && isHttpUrl(value) ? value : '');
+            const linkText = (value && typeof value === 'object' && value.text) || 'カタログを見る';
+
+            if (href) {
+              const link = document.createElement('a');
+              link.href = href;
+              link.textContent = linkText;
+              link.target = '_blank';
+              link.rel = 'noopener noreferrer';
+              td.appendChild(link);
+            } else {
+              td.textContent = (value && typeof value === 'object' ? value.text : value) || '';
+            }
+          } else if (value && typeof value === 'object') {
+            if (value.href) {
+              const link = document.createElement('a');
+              link.href = value.href;
+              link.textContent = value.text || '詳細を見る';
+              link.target = '_blank';
+              link.rel = 'noopener noreferrer';
+              td.appendChild(link);
+            } else {
+              td.textContent = value.text || '';
+              if (value.className) td.classList.add(value.className);
+            }
+          } else {
+            td.textContent = value || '';
+          }
+
+          if (row.cellClass) td.classList.add(row.cellClass);
+          tr.appendChild(td);
+        });
+
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(tbody);
+      tableWrapper.appendChild(table);
+      section.appendChild(tableWrapper);
+
+      container.appendChild(section);
+    } catch (err) {
+      console.error(err);
+      showError(err);
+    }
+  }
+
+  function showError(err) {
+    applySurveyHeaders(`${QUESTION1_DESCRIPTION} ${LINEUP_INSTRUCTION}`);
+
+    const container = document.getElementById('lineupContainer');
+    container.innerHTML = `<section class="block"><div class="empty">
+      商品情報の取得に失敗しました。
+      ${err && err.message ? `<br><small>詳細: ${err.message}</small>` : ''}
+    </div></section>`;
+  }
+</script>
   </body>
 </html>
