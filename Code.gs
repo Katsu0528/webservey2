@@ -372,10 +372,14 @@ function getUserEmail() {
     if (email) return email;
   }
 
-  var effective = Session.getEffectiveUser();
-  if (effective) {
-    var effectiveEmail = effective.getEmail();
-    if (effectiveEmail) return effectiveEmail;
+  try {
+    var effective = Session.getEffectiveUser();
+    if (effective) {
+      var effectiveEmail = effective.getEmail();
+      if (effectiveEmail) return effectiveEmail;
+    }
+  } catch (err) {
+    Logger.log('EffectiveUser 取得時に権限エラーが発生しました: ' + err.message);
   }
 
   return '';
