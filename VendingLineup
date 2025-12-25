@@ -1,377 +1,872 @@
-/** デフォルトで参照するメーカー画像フォルダ ID */
-var DEFAULT_MANUFACTURERS_FOLDER_ID = '1AJd4BTFTVrLNep44PDz1AuwSF_5TFxdx';
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>自販機アンケート</title>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600&family=Noto+Sans+JP:wght@400;500;700&display=swap');
 
-/** カタログ PDF を格納するフォルダ ID */
-var DEFAULT_CATALOG_FOLDER_ID = '13vPmhzBEPc4X57QrDPogS2tBC5RKCpg6';
+      :root {
+        --accent: #ff7eb6;
+        --accent-2: #6c8cff;
+        --border: #e5e7f0;
+        --muted: #f7f8ff;
+        --text: #1f2430;
+        --shadow: 0 12px 28px rgba(61, 78, 255, 0.08);
+      }
 
-/** 優先的に表示するメーカーの並び順 */
-var PREFERRED_MANUFACTURER_ORDER = ['ポッカサッポロ', 'アサヒ', 'キリン', '伊藤園'];
+      * {
+        box-sizing: border-box;
+      }
 
-/**
- * マッチング用に文字列を正規化する。
- * - 拡張子を除去
- * - スペースや括弧などの記号を除去
- * - 小文字化
- * @param {string} value
- * @returns {string}
- */
-function normalizeKey(value) {
-  if (!value) return '';
+      body {
+        margin: 0;
+        font-family: 'Noto Sans JP', 'Baloo 2', system-ui, -apple-system, sans-serif;
+        background: radial-gradient(circle at 10% 20%, #fff3fb 0, #f1f6ff 45%, #ffffff 90%);
+        color: var(--text);
+      }
 
-  var trimmed = trimExtension(String(value));
-  return trimmed
-    .replace(/[\s\u3000\(\)（）_\-]/g, '')
-    .toLowerCase();
-}
+      .page {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 28px 16px 60px;
+      }
 
-/** 集計結果を書き込むスプレッドシート ID */
-var SURVEY_SPREADSHEET_ID = '1xkg8vNscpcWTA6GA0VPxGTJCAH6LyvsYhq7VhOlDcXg';
+      h1 {
+        font-size: 30px;
+        margin: 0 0 12px;
+        letter-spacing: 0.02em;
+      }
 
-/** 集計結果を書き込むシート名 */
-var SURVEY_SHEET_NAME = '回答';
+      h2 {
+        margin: 4px 0 6px;
+      }
 
-/**
- * Vending lineup web app entry point.
- * @param {GoogleAppsScript.Events.DoGet} e
- * @returns {GoogleAppsScript.HTML.HtmlOutput}
- */
-function doGet(e) {
-  var params = (e && e.parameter) || {};
-  var maker = params.maker || '';
-  var folderId = params.folderId || DEFAULT_MANUFACTURERS_FOLDER_ID || '';
+      p.lead {
+        margin: 0 0 18px;
+        color: #3a3f52;
+        line-height: 1.7;
+      }
 
-  var template = HtmlService.createTemplateFromFile('VendingLineup');
-  template.maker = maker;
-  template.folderId = folderId;
+      header.hero {
+        background: linear-gradient(120deg, rgba(255, 126, 182, 0.12), rgba(108, 140, 255, 0.12));
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 22px 20px 20px;
+        box-shadow: var(--shadow);
+      }
 
-  return template
-    .evaluate()
-    .setTitle('自販機アンケート')
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-}
+      .hero-badges {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 8px;
+      }
 
-/**
- * フォーム送信後にサンクスページを表示する。
- * @param {GoogleAppsScript.Events.DoPost} e
- * @returns {GoogleAppsScript.HTML.HtmlOutput}
- */
-function doPost(e) {
-  var params = (e && e.parameter) || {};
-  var question1 = params.question1Answer || params.question1 || params.q1 || '';
-  var question2 = params.question2Answer || params.question2 || params.q2 || '';
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #fff;
+        color: var(--text);
+        border: 1px solid var(--border);
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-weight: 600;
+      }
 
-  try {
-    submitSurveyResponse(question1, question2);
-    return HtmlService.createHtmlOutput(
-      '<!DOCTYPE html>' +
-        '<html lang="ja">' +
-        '<head>' +
-        '<meta charset="UTF-8" />' +
-        '<meta name="viewport" content="width=device-width, initial-scale=1" />' +
-        '<title>送信完了</title>' +
-        '<style>body{font-family:\"Noto Sans JP\",sans-serif;padding:32px;text-align:center;}h1{font-size:22px;margin-bottom:12px;}p{margin:0;color:#444;}</style>' +
-        '</head>' +
-        '<body>' +
-        '<h1>送信しました！</h1>' +
-        '<p>ご回答ありがとうございました。</p>' +
-        '</body>' +
-        '</html>'
-    );
-  } catch (err) {
-    return HtmlService.createHtmlOutput(
-      '<p>送信に失敗しました: ' +
-        (err && err.message ? err.message : '不明なエラー') +
-        '</p>'
-    ).setTitle('送信エラー');
-  }
-}
+      .pill.accent {
+        background: #1f1f1f;
+        color: #fff;
+        border-color: transparent;
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+      }
 
-/**
- * Drive 上のフォルダ構造から商品ラインアップを返す。
- * フォルダ直下に商品画像がある場合は "全商品" カテゴリとして扱い、
- * サブフォルダがある場合はフォルダ名をカテゴリー名として扱う。
- *
- * @param {string} maker メーカー名
- * @param {string} folderId 画像が格納された Drive フォルダ ID
- * @returns {{manufacturer: string, categories: Array<{name: string, items: Array<{name: string, imageUrl: string, price: string}>}>}}
- */
-function getVendingLineup(maker, folderId) {
-  var result = {
-    manufacturer: maker || '',
-    categories: [],
-    manufacturers: getManufacturers(),
-  };
+      .pill.alt {
+        background: #fff1f8;
+        color: #ff4f9d;
+        border-color: #ffd7eb;
+      }
 
-  if (!folderId) {
-    return result;
-  }
+      section.block {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 18px 16px 20px;
+        margin-top: 16px;
+        box-shadow: var(--shadow);
+      }
 
-  try {
-    var rootFolder = DriveApp.getFolderById(folderId);
+      #lineupContainer {
+        margin-top: 16px;
+        display: grid;
+        gap: 16px;
+      }
 
-    var subfolders = rootFolder.getFolders();
-    while (subfolders.hasNext()) {
-      var categoryFolder = subfolders.next();
-      result.categories.push({
-        name: categoryFolder.getName(),
-        items: extractItems(categoryFolder),
-      });
-    }
+      .control-row {
+        display: grid;
+        gap: 12px;
+      }
 
-    if (!result.categories.length) {
-      result.categories.push({
-        name: '全商品',
-        items: extractItems(rootFolder),
-      });
-    }
-  } catch (err) {
-    throw new Error('商品情報の取得に失敗しました: ' + err.message);
-  }
-
-  return result;
-}
-
-/**
- * メーカー一覧を取得する。デフォルトフォルダ配下のサブフォルダをメーカーとして扱う。
- * @returns {Array<{name: string, folderId: string, imageUrl: string, catalogUrl: string}>}
- */
-function getManufacturers() {
-  if (!DEFAULT_MANUFACTURERS_FOLDER_ID) return [];
-
-  try {
-    var root = DriveApp.getFolderById(DEFAULT_MANUFACTURERS_FOLDER_ID);
-    var folders = root.getFolders();
-    var manufacturers = [];
-    var catalogMap = getCatalogMap();
-    var catalogFallbackUrl = getCatalogFallbackUrl();
-
-    while (folders.hasNext()) {
-      var folder = folders.next();
-      var firstImage = getFirstImageInfo(folder);
-      var normalizedKey = normalizeKey(folder.getName()) || normalizeKey(firstImage.name);
-      manufacturers.push({
-        name: folder.getName(),
-        folderId: folder.getId(),
-        imageUrl: firstImage.url,
-        imageName: firstImage.name,
-        catalogUrl:
-          (normalizedKey && catalogMap[normalizedKey] ? catalogMap[normalizedKey] : '') ||
-          catalogFallbackUrl,
-      });
-    }
-
-    var normalizedMap = manufacturers.reduce(function (map, entry) {
-      var keys = [entry.name, trimExtension(entry.imageName)];
-      keys.forEach(function (key) {
-        var normalized = normalizeKey(key);
-        if (normalized && !map[normalized]) {
-          map[normalized] = entry;
+      @media (min-width: 768px) {
+        .control-row {
+          grid-template-columns: 1fr 1fr;
         }
-      });
-      return map;
-    }, {});
+      }
 
-    var orderedByPreference = PREFERRED_MANUFACTURER_ORDER.map(function (name) {
-      var normalized = normalizeKey(name);
-      return (
-        normalizedMap[normalized] || {
-          name: name,
-          folderId: '',
-          imageUrl: '',
-          imageName: '',
-          catalogUrl: '',
+      label {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        font-weight: 700;
+        color: #3a3f52;
+      }
+
+      select,
+      textarea,
+      input[type='email'] {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 12px;
+        font-size: 14px;
+        font-family: inherit;
+        background: #f9fafb;
+      }
+
+      textarea {
+        min-height: 96px;
+        resize: vertical;
+      }
+
+      .status-message {
+        margin: 0;
+        font-size: 13px;
+        color: #2f3345;
+      }
+
+      .status-message.error {
+        color: #d92b4c;
+      }
+
+      .question-two {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .question-two-body {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .question-two textarea {
+        background: #f7f8ff;
+      }
+
+      .question-two-actions {
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 12px 18px;
+        background: linear-gradient(120deg, var(--accent), var(--accent-2));
+        color: #fff;
+        border-radius: 14px;
+        font-weight: 800;
+        border: none;
+        cursor: pointer;
+        box-shadow: 0 12px 24px rgba(255, 126, 182, 0.35);
+        transition: 0.18s ease;
+      }
+
+      button:hover {
+        transform: translateY(-2px);
+      }
+
+      .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .section-lead {
+        margin: 0;
+        color: #4a5066;
+        line-height: 1.6;
+        font-size: 14px;
+      }
+
+      .eyebrow {
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        font-weight: 700;
+        color: #8b92b2;
+        font-size: 12px;
+        margin: 0;
+      }
+
+      .note {
+        color: #4b4f65;
+        background: #fdf3ff;
+        border: 1px dashed #ffc0df;
+        padding: 10px 12px;
+        border-radius: 12px;
+        margin: 6px 0 10px;
+      }
+
+      .media-frame {
+        width: 100%;
+        aspect-ratio: 3 / 4;
+        min-height: 160px;
+        border-radius: 12px;
+        background: #fff;
+        border: 1px solid var(--border);
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px;
+      }
+
+      .media-frame img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        display: block;
+        background: transparent;
+      }
+
+      .image-grid {
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 12px;
+        margin: 12px 0 4px;
+        overflow-x: auto;
+        padding-bottom: 6px;
+         overflow-y: visible;  /* 追加：縦方向のはみ出しを許可 */
+          padding-top: 6px;     /* 追加：hoverで上に浮く分の逃げ */
+      }
+
+      @media (min-width: 768px) {
+        .image-grid::before {
+          content: '';
+          flex: 0 0 152px;
         }
-      );
-    });
+      }
 
-    var usedKeys = orderedByPreference.reduce(function (set, entry) {
-      var key = normalizeKey(entry.name) || normalizeKey(entry.imageName);
-      if (key) set[key] = true;
-      return set;
-    }, {});
+      .image-grid figcaption {
+        font-size: 17px;
+        font-weight: 800;
+        margin-top: 6px;
+        color: #2f3345;
+        text-align: center;
+      }
 
-    manufacturers.forEach(function (entry) {
-      var key = normalizeKey(entry.name) || normalizeKey(entry.imageName);
-      if (key && usedKeys[key]) return;
-      orderedByPreference.push(entry);
-      usedKeys[key] = true;
-    });
+      .image-card {
+        margin: 0;
+        padding: 10px;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: #fff;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        flex: 0 0 220px;
+        width: 220px;
+        cursor: pointer;
+        transition: 0.18s ease;
+        box-shadow: 0 10px 20px rgba(61, 78, 255, 0.06);
+      }
 
-    return orderedByPreference;
-  } catch (err) {
-    throw new Error('メーカー一覧の取得に失敗しました: ' + err.message);
+      .image-card:hover {
+        transform: translateY(-2px);
+      }
+
+      .image-card.selected {
+        border-color: var(--accent);
+        box-shadow: 0 14px 28px rgba(255, 126, 182, 0.28);
+      }
+
+      .image-card.dimmed {
+        opacity: 0.45;
+        filter: grayscale(0.7);
+      }
+
+      .maker-list {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-top: 8px;
+      }
+
+      .maker-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 12px;
+        background: #f5f6fb;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        font-weight: 700;
+        color: #2f3345;
+      }
+
+      .table-wrapper {
+        overflow-x: auto;
+        margin-top: 12px;
+      }
+
+      table.lineup-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+        table-layout: fixed;
+      }
+
+      table.lineup-table th,
+      table.lineup-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border);
+        text-align: center;
+        font-size: 14px;
+      }
+
+      table.lineup-table th {
+        background: #f5f6fb;
+        font-weight: 700;
+      }
+
+      .maker-header {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .maker-header img {
+        width: 80px;
+        height: 80px;
+        object-fit: contain;
+        border-radius: 10px;
+        background: #fff;
+        border: 1px solid var(--border);
+        padding: 6px;
+      }
+
+      table.lineup-table th:first-child,
+      table.lineup-table td:first-child {
+        text-align: left;
+        background: #f9fafc;
+        width: 140px;
+      }
+
+      .status-allow {
+        color: #1f8bff;
+        font-weight: 800;
+      }
+
+      .status-deny {
+        color: #d92b4c;
+        font-weight: 800;
+      }
+
+      .lineup-text {
+        text-align: right;
+        color: #2f3345;
+        line-height: 1.5;
+        font-size: 13px;
+      }
+
+      table.lineup-table tbody tr:last-child td {
+        border-bottom: none;
+      }
+
+      .empty {
+        padding: 14px;
+        background: var(--muted);
+        border-radius: 10px;
+        text-align: center;
+        color: #3a3f52;
+      }
+
+      @media (max-width: 600px) {
+        h1 {
+          font-size: 24px;
+        }
+      }
+    </style>
+  </head>
+  <body style="margin:auto 0;padding:auto 0;">
+    <div class="page">
+      <header class="hero">
+        <div class="hero-badges">
+          <span class="pill alt">所要時間:1分</span>
+        </div>
+        <h1 id="pageTitle"></h1>
+        <p id="pageLead" class="lead"></p>
+      </header>
+
+      <section id="lineupContainer"></section>
+      <section id="question2Section"></section>
+    </div>
+
+    <script>
+  const makerFromTemplate = <?!= JSON.stringify(maker || '') ?>;
+  const folderIdFromTemplate = <?!= JSON.stringify(folderId || '') ?>;
+
+  const SURVEY_TITLE = '新オフィスの自販機を皆さんの投票で決めます！';
+  const QUESTION1_DESCRIPTION = '商品一覧を確認して、新オフィスに置きたい自販機メーカーを一つ選んでください。';
+  const LINEUP_INSTRUCTION =
+    '投票数が多いものに決めます！';
+  const QUESTION2_DESCRIPTION =
+    'オフィスの自販機に「これは絶対に欲しい！」という飲み物やカテゴリがあれば、自由にご記入ください。';
+
+  const FALLBACK_IMAGE =
+    'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="360" height="240" viewBox="0 0 360 240"><rect width="360" height="240" fill="%23f2f4f7"/><rect x="30" y="30" width="300" height="180" rx="12" fill="none" stroke="%23c3cad4" stroke-width="8"/><path d="M96 166l48-58 48 58 48-72 24 32" fill="none" stroke="%23c3cad4" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><circle cx="138" cy="90" r="22" fill="%23d8dde5"/></svg>';
+
+  const MAX_TABLE_COLUMNS = 5;
+  const MAX_MANUFACTURERS = MAX_TABLE_COLUMNS - 1;
+
+  const params = new URLSearchParams(window.location.search);
+  const maker = params.get('maker') || makerFromTemplate || '';
+  const folderId = params.get('folderId') || folderIdFromTemplate || '';
+
+  let selectedMakerName = maker || '';
+
+  function isHttpUrl(value) {
+    if (!value) return false;
+    const v = String(value).trim();
+    return v.startsWith('http://') || v.startsWith('https://');
   }
-}
 
-/**
- * カタログ PDF の URL をメーカー名で引けるマップとして返す。
- * @returns {Object<string, string>}
- */
-function getCatalogMap() {
-  if (!DEFAULT_CATALOG_FOLDER_ID) return {};
+  function buildCatalogUrl(makerName, folderId) {
+    if (!folderId) return '';
+    const url = new URL(window.location.href);
+    // 既存パラメータは消さずに maker/folderId だけ上書きする（リンク追加で壊れにくくする）
+    url.searchParams.set('maker', makerName || '');
+    url.searchParams.set('folderId', folderId);
+    return url.toString();
+  }
 
-  try {
-    var folder = DriveApp.getFolderById(DEFAULT_CATALOG_FOLDER_ID);
-    var files = folder.getFiles();
-    var map = {};
+  // 正規表現なしで Drive URL / ID を embeddable に変換
+  function toEmbeddableUrl(src) {
+    if (!src) return '';
 
-    while (files.hasNext()) {
-      var file = files.next();
-      var normalized = normalizeKey(file.getName());
-      if (!normalized) continue;
-      map[normalized] = getCatalogUrl(file);
+    // IDだけ渡された場合
+    if (!isHttpUrl(src)) {
+      return 'https://lh3.googleusercontent.com/d/' + String(src).trim();
     }
 
-    return map;
-  } catch (err) {
-    throw new Error('カタログの取得に失敗しました: ' + err.message);
-  }
-}
-
-/**
- * カタログが見つからない場合に利用するフォルダのリンクを返す。
- * @returns {string}
- */
-function getCatalogFallbackUrl() {
-  if (!DEFAULT_CATALOG_FOLDER_ID) return '';
-  return 'https://drive.google.com/drive/folders/' + DEFAULT_CATALOG_FOLDER_ID;
-}
-
-/**
- * PDF を共有リンクとして返す。公開設定が足りなければ自動でリンク共有に切り替える。
- * @param {GoogleAppsScript.Drive.File} file
- * @returns {string}
- */
-function getCatalogUrl(file) {
-  var id = file && file.getId && file.getId();
-  if (!id) return '';
-
-  try {
-    var access = file.getSharingAccess();
-    var permission = file.getSharingPermission();
-    var isPublic =
-      access === DriveApp.Access.ANYONE_WITH_LINK &&
-      permission === DriveApp.Permission.VIEW;
-
-    if (!isPublic) {
-      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    let urlObj;
+    try {
+      urlObj = new URL(src);
+    } catch (e) {
+      return src;
     }
-  } catch (err) {
-    Logger.log('カタログの公開設定変更に失敗しました: ' + err.message);
+
+    // すでに googleusercontent の場合はそのまま
+    if (urlObj.hostname.includes('googleusercontent.com')) {
+      return src;
+    }
+
+    // query id=xxxx
+    const idFromQuery = urlObj.searchParams.get('id');
+    if (idFromQuery) {
+      return 'https://lh3.googleusercontent.com/d/' + idFromQuery;
+    }
+
+    // /file/d/{id}/view
+    // /d/{id}/...
+    const path = urlObj.pathname || '';
+    const parts = path.split('/').filter(Boolean);
+
+    // パスからIDを拾う（/d/ の次、または /file/d/ の次）
+    for (let i = 0; i < parts.length - 1; i++) {
+      if (parts[i] === 'd' && parts[i + 1]) {
+        return 'https://lh3.googleusercontent.com/d/' + parts[i + 1];
+      }
+      if (parts[i] === 'file' && parts[i + 1] === 'd' && parts[i + 2]) {
+        return 'https://lh3.googleusercontent.com/d/' + parts[i + 2];
+      }
+    }
+
+    // ここまで取れなければ元URLを返す
+    return src;
   }
 
-  return 'https://drive.google.com/file/d/' + id + '/view?usp=drivesdk';
-}
-
-/**
- * 指定フォルダ配下のファイルから商品情報を抽出する。
- * 価格はファイルの説明文に数字のみが記載されている場合に採用する。
- *
- * @param {GoogleAppsScript.Drive.Folder} folder
- * @returns {Array<{name: string, imageUrl: string, price: string}>}
- */
-function extractItems(folder) {
-  var items = [];
-  var files = folder.getFiles();
-
-  while (files.hasNext()) {
-    var file = files.next();
-    items.push({
-      name: file.getName(),
-      imageUrl: getImageUrl(file),
-      price: parsePrice(file.getDescription()),
-    });
+  function trimExtension(name) {
+    if (!name) return '';
+    const lastDotIndex = name.lastIndexOf('.');
+    if (lastDotIndex <= 0) return name;
+    return name.slice(0, lastDotIndex);
   }
 
-  return items;
-}
+  function getMakerDisplayName(entry) {
+    return entry.name || trimExtension(entry.imageName) || 'メーカー未設定';
+  }
 
-/**
- * ファイル説明文から価格を抽出する。
- * @param {string} description
- * @returns {string}
- */
-function parsePrice(description) {
-  if (!description) return '';
-  var match = String(description).match(/([0-9]{2,})/);
-  return match ? match[1] : '';
-}
+  function createImageElement(src, alt) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'media-frame';
 
-/**
- * ファイル名の拡張子を取り除く。
- * @param {string} name
- * @returns {string}
- */
-function trimExtension(name) {
-  if (!name) return '';
-  var lastDot = String(name).lastIndexOf('.');
-  if (lastDot <= 0) return String(name);
-  return String(name).slice(0, lastDot);
-}
+    const img = document.createElement('img');
+    img.loading = 'lazy';
+    img.alt = alt || '商品画像';
+    img.referrerPolicy = 'no-referrer';
 
-/**
- * フォルダ内の最初のファイルの URL を取得する。
- * @param {GoogleAppsScript.Drive.Folder} folder
- * @returns {string}
- */
-function getFirstImageInfo(folder) {
-  var file = findFirstFileRecursively(folder);
-  if (file) {
-    return {
-      url: getImageUrl(file),
-      name: file.getName(),
+    const applyFallback = () => {
+      img.onerror = null;
+      img.src = FALLBACK_IMAGE;
     };
-  }
-  return { url: '', name: '' };
-}
 
-/**
- * フォルダ配下から最初に見つかったファイルを再帰的に取得する。
- * @param {GoogleAppsScript.Drive.Folder} folder
- * @returns {GoogleAppsScript.Drive.File|null}
- */
-function findFirstFileRecursively(folder) {
-  var files = folder.getFiles();
-  if (files.hasNext()) {
-    return files.next();
+    img.onerror = applyFallback;
+    img.src = toEmbeddableUrl(src) || FALLBACK_IMAGE;
+
+    wrapper.appendChild(img);
+    return wrapper;
   }
 
-  var subfolders = folder.getFolders();
-  while (subfolders.hasNext()) {
-    var subfolder = subfolders.next();
-    var found = findFirstFileRecursively(subfolder);
-    if (found) return found;
-  }
+  function enableImageSelection(imageGrid, onSelect) {
+    const cards = Array.from(imageGrid.querySelectorAll('.image-card'));
+    if (!cards.length) return;
 
-  return null;
-}
+    const applySelection = (selectedCard, shouldNotify = true) => {
+      cards.forEach((card) => {
+        const isSelected = card === selectedCard;
+        card.classList.toggle('selected', isSelected);
+        card.classList.toggle('dimmed', !!selectedCard && !isSelected);
+        card.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+        if (isSelected && shouldNotify && typeof onSelect === 'function') {
+          onSelect(card.dataset.makerName || '');
+        }
+      });
+    };
 
-/**
- * 画像を埋め込み表示用の URL として返す。
- * Drive のファイルページ URL では直接表示できないため、googleusercontent.com ドメインの URL を利用する。
- *
- * @param {GoogleAppsScript.Drive.File} file
- * @returns {string}
- */
-function getImageUrl(file) {
-  var id = file && file.getId && file.getId();
-  if (!id) return '';
+    cards.forEach((card) => {
+      const selectCard = () => applySelection(card);
 
-  try {
-    var access = file.getSharingAccess();
-    var permission = file.getSharingPermission();
-    var isPublic =
-      access === DriveApp.Access.ANYONE_WITH_LINK &&
-      permission === DriveApp.Permission.VIEW;
+      card.addEventListener('click', selectCard);
+      card.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          selectCard();
+        }
+      });
+    });
 
-    if (!isPublic) {
-      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    const initialCard =
+      cards.find((card) => (card.dataset.makerName || '') === maker) || cards[0];
+    if (initialCard) {
+      applySelection(initialCard, true);
     }
-  } catch (err) {
-    Logger.log('画像の公開設定変更に失敗しました: ' + err.message);
   }
 
-  return 'https://lh3.googleusercontent.com/d/' + id;
-}
+  function renderQuestionTwoSection() {
+    const questionTwo = document.getElementById('question2Section');
+    questionTwo.className = 'block question-two';
+    questionTwo.innerHTML = `
+      <div>
+        <p class="eyebrow">質問２</p>
+        <h2>欲しい商品やご要望をご自由にご記入ください</h2>
+        <p class="lead">${QUESTION2_DESCRIPTION}</p>
+      </div>
+      <div class="question-two-body">
+        <textarea placeholder="例：無糖の炭酸が欲しい！、100%ジュース絶対１つは入れて！"></textarea>
+        <p class="status-message" aria-live="polite"></p>
+        <div class="question-two-actions">
+          <button type="button">送信</button>
+        </div>
+      </div>
+    `;
 
+    const textarea = questionTwo.querySelector('textarea');
+    const submitButton = questionTwo.querySelector('button');
+    const statusElement = questionTwo.querySelector('.status-message');
+
+    const setStatus = (message, isError) => {
+      statusElement.textContent = message || '';
+      statusElement.classList.toggle('error', !!isError);
+    };
+
+    submitButton.addEventListener('click', () => {
+      const question2Answer = (textarea.value || '').trim();
+      const question1Answer = selectedMakerName || '';
+
+      if (!question1Answer) {
+        setStatus('質問１の回答を選択してください。', true);
+        return;
+      }
+
+      // google.script.run が無い環境（ローカルHTML等）ならメッセージ出して止める
+      if (!window.google || !google.script || !google.script.run) {
+        setStatus('送信できません（google.script.run が利用できない開き方です）。WebアプリURLで開いてください。', true);
+        return;
+      }
+
+      submitButton.disabled = true;
+      setStatus('送信中です...', false);
+
+      google.script.run
+        .withSuccessHandler(() => {
+          setStatus('送信しました。ご協力ありがとうございます！');
+          textarea.value = '';
+          submitButton.disabled = false;
+        })
+        .withFailureHandler((err) => {
+          setStatus(`送信に失敗しました。${err && err.message ? err.message : ''}`, true);
+          submitButton.disabled = false;
+        })
+        .submitSurveyResponse(question1Answer, question2Answer);
+    });
+  }
+
+  function applySurveyHeaders(leadText) {
+    document.getElementById('pageTitle').textContent = SURVEY_TITLE;
+    document.getElementById('pageLead').textContent = leadText || QUESTION1_DESCRIPTION;
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    // ✅ 先にヘッダーとQ2を必ず出す（失敗しても“ピルだけ”にならない）
+    applySurveyHeaders(`${QUESTION1_DESCRIPTION} ${LINEUP_INSTRUCTION}`);
+    renderQuestionTwoSection();
+
+    // ✅ Webアプリとして開けてない/previewで google.script.run が無い時に原因表示
+    if (!window.google || !google.script || !google.script.run) {
+      showError({ message: 'google.script.run がありません。GASのWebアプリ(/exec or /dev)として開けていない可能性があります。' });
+      return;
+    }
+
+    google.script.run
+      .withSuccessHandler(renderLineup)
+      .withFailureHandler(showError)
+      .getVendingLineup(maker, folderId);
+  });
+
+  function renderLineup(data) {
+    try {
+      const container = document.getElementById('lineupContainer');
+      const manufacturer = (data && data.manufacturer) || maker || '';
+      const categories = (data && data.categories) || [];
+      const manufacturers = (data && data.manufacturers) || [];
+        const extraCatalogLinks = [
+          { href: 'https://drive.google.com/file/d/1uMHmR0DJm7OMKq9Qqh-eOs_5ezP2HHY_/view?usp=sharing', text: '商品一覧を見る' },
+          { href: 'https://drive.google.com/file/d/1omU2GbhqJlPQ_6RslD-DPa0NO_aJplsK/view?usp=sharing', text: '商品一覧を見る' },
+          { href: 'https://drive.google.com/file/d/1Y0hQLd3C-9q75exTyQYwQDjMVHNYm-UK/view?usp=sharing', text: '商品一覧を見る' },
+          { href: 'https://drive.google.com/file/d/1pzSG-GG5S_y7Lq_wXhgaFPwbkQ_Ove2C/view?usp=sharing', text: '商品一覧を見る' },
+        ];
+
+      const allItems = categories.flatMap((category) => {
+        if (!category.items || !category.items.length) return [];
+        return category.items.map((item) => ({ ...item, category: category.name || 'カテゴリ未設定' }));
+      });
+
+      const normalizedManufacturers = manufacturers.map((entry) => ({
+        ...entry,
+        name: entry.name || trimExtension(entry.imageName),
+        catalogUrl: buildCatalogUrl(entry.name || trimExtension(entry.imageName), entry.folderId),
+      }));
+
+      const normalizedMap = new Map(
+        normalizedManufacturers.map((entry) => [getMakerDisplayName(entry), entry])
+      );
+
+      const folderBasedManufacturers = allItems.slice(0, MAX_MANUFACTURERS).map((item, index) => ({
+        name: trimExtension(item.name) || `画像${index + 1}`,
+        imageUrl: item.imageUrl || '',
+        imageName: item.name,
+      }));
+
+      const fallbackMaker = {
+        name: manufacturer || 'メーカー未設定',
+        imageUrl: (allItems[0] && allItems[0].imageUrl) || '',
+        imageName: (allItems[0] && allItems[0].name) || manufacturer,
+      };
+
+      const prioritizedManufacturers =
+        folderBasedManufacturers.length > 0
+          ? folderBasedManufacturers
+          : normalizedManufacturers.length > 0
+          ? normalizedManufacturers
+          : [fallbackMaker];
+
+      const paddedManufacturers = prioritizedManufacturers
+        .slice(0, MAX_MANUFACTURERS)
+        .map((entry) => {
+          const displayName = getMakerDisplayName(entry);
+          const matched = normalizedMap.get(displayName) || {};
+          return {
+            ...entry,
+            folderId: entry.folderId || matched.folderId || '',
+            catalogUrl: entry.catalogUrl || matched.catalogUrl || '',
+          };
+        });
+
+      while (paddedManufacturers.length < MAX_MANUFACTURERS) {
+        paddedManufacturers.push({ name: '未設定', imageUrl: '', imageName: '', catalogUrl: '', folderId: '' });
+      }
+
+      const manufacturerEntries = paddedManufacturers.map((makerEntry) => {
+        const name = getMakerDisplayName(makerEntry);
+
+        // ✅ 正規表現を使わず文字列判定
+        const isKirin = name.includes('キリン');
+        const isAsahi = name.includes('アサヒ');
+
+        const catalogUrl = makerEntry.catalogUrl || buildCatalogUrl(name, makerEntry.folderId);
+
+        return {
+          name,
+          imageUrl: makerEntry.imageUrl || '',
+          customStatus: {
+            text: isKirin ? '可能' : '不可(販売会社決定)',
+            className: isKirin ? 'status-allow' : 'status-deny',
+          },
+          note: isAsahi ? '※交渉次第' : '',
+          catalogLink: catalogUrl
+            ? { href: catalogUrl, text: 'カタログを見る' }
+            : '',
+        };
+      });
+
+      container.innerHTML = '';
+      applySurveyHeaders(`${QUESTION1_DESCRIPTION} ${LINEUP_INSTRUCTION}`);
+
+      const section = document.createElement('section');
+      section.className = 'block';
+
+      const sectionHeader = document.createElement('div');
+      sectionHeader.className = 'section-header';
+      sectionHeader.innerHTML = `
+        <div>
+          <p class="eyebrow">質問１</p>
+          <h2>メーカーを1つ選んでください</h2>
+          <p class="section-lead">候補を見比べて、新オフィスに置きたいメーカーを1つ選んでください。</p>
+        </div>
+      `;
+      section.appendChild(sectionHeader);
+
+      const imageGrid = document.createElement('div');
+      imageGrid.className = 'image-grid';
+
+      manufacturerEntries.forEach((makerEntry) => {
+        const displayName = makerEntry.name || 'メーカー未設定';
+        const figure = document.createElement('figure');
+        figure.className = 'image-card';
+        figure.tabIndex = 0;
+        figure.setAttribute('role', 'button');
+        figure.setAttribute('aria-pressed', 'false');
+        figure.dataset.makerName = displayName;
+        figure.appendChild(createImageElement(makerEntry.imageUrl, displayName));
+        const caption = document.createElement('figcaption');
+        caption.textContent = displayName;
+        figure.appendChild(caption);
+        imageGrid.appendChild(figure);
+      });
+
+      enableImageSelection(imageGrid, (name) => {
+        selectedMakerName = name;
+      });
+
+      section.appendChild(imageGrid);
+
+      const tableWrapper = document.createElement('div');
+      tableWrapper.className = 'table-wrapper';
+
+      const table = document.createElement('table');
+      table.className = 'lineup-table';
+
+      const tbody = document.createElement('tbody');
+      const rows = [
+        { label: '商品カスタマイズ', accessor: (entry) => entry.customStatus },
+        { label: 'カタログ', accessor: (entry) => entry.catalogLink, cellClass: 'lineup-text' },
+        { label: '備考', accessor: (entry) => entry.note },
+      ];
+
+      rows.forEach((row) => {
+        const tr = document.createElement('tr');
+        const heading = document.createElement('th');
+        heading.scope = 'row';
+        heading.textContent = row.label;
+        tr.appendChild(heading);
+
+        if (row.label === 'カタログ') {
+          extraCatalogLinks.forEach((link) => {
+            const td = document.createElement('td');
+            const anchor = document.createElement('a');
+            anchor.href = link.href;
+            anchor.textContent = link.text;
+            anchor.target = '_blank';
+            anchor.rel = 'noopener noreferrer';
+            td.appendChild(anchor);
+            if (row.cellClass) td.classList.add(row.cellClass);
+            tr.appendChild(td);
+          });
+
+          tbody.appendChild(tr);
+          return;
+        }
+
+        manufacturerEntries.forEach((entry) => {
+          const td = document.createElement('td');
+          const value = row.accessor(entry);
+
+          if (value && typeof value === 'object') {
+            if (value.href) {
+              const link = document.createElement('a');
+              link.href = value.href;
+              link.textContent = value.text || '詳細を見る';
+              link.target = '_blank';
+              link.rel = 'noopener noreferrer';
+              td.appendChild(link);
+            } else {
+              td.textContent = value.text || '';
+              if (value.className) td.classList.add(value.className);
+            }
+          } else {
+            td.textContent = value || '';
+          }
+
+          if (row.cellClass) td.classList.add(row.cellClass);
+          tr.appendChild(td);
+        });
+
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(tbody);
+      tableWrapper.appendChild(table);
+      section.appendChild(tableWrapper);
+
+      container.appendChild(section);
+    } catch (err) {
+      console.error(err);
+      showError(err);
+    }
+  }
+
+  function showError(err) {
+    applySurveyHeaders(`${QUESTION1_DESCRIPTION} ${LINEUP_INSTRUCTION}`);
+
+    const container = document.getElementById('lineupContainer');
+    container.innerHTML = `<section class="block"><div class="empty">
+      商品情報の取得に失敗しました。
+      ${err && err.message ? `<br><small>詳細: ${err.message}</small>` : ''}
+    </div></section>`;
+  }
+</script>
+  </body>
+</html>
