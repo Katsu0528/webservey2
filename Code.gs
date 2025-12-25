@@ -1,6 +1,9 @@
 /** デフォルトで参照するメーカー一覧フォルダ ID */
 var DEFAULT_MANUFACTURERS_FOLDER_ID = '1AJd4BTFTVrLNep44PDz1AuwSF_5TFxdx';
 
+/** メーカーごとのカタログを格納しているフォルダ ID */
+var DEFAULT_CATALOG_FOLDER_ID = '13vPmhzBEPc4X57QrDPogS2tBC5RKCpg6';
+
 /** 集計結果を書き込むスプレッドシート ID */
 var SURVEY_SPREADSHEET_ID = '1xkg8vNscpcWTA6GA0VPxGTJCAH6LyvsYhq7VhOlDcXg';
 
@@ -84,15 +87,19 @@ function getManufacturers() {
     var root = DriveApp.getFolderById(DEFAULT_MANUFACTURERS_FOLDER_ID);
     var folders = root.getFolders();
     var manufacturers = [];
+    var catalogMap = getCatalogLinkMap();
 
     while (folders.hasNext()) {
       var folder = folders.next();
       var firstImage = getFirstImageInfo(folder);
+      var trimmedName = trimExtension(folder.getName());
       manufacturers.push({
         name: folder.getName(),
         folderId: folder.getId(),
         imageUrl: firstImage.url,
         imageName: firstImage.name,
+        catalogUrl:
+          catalogMap[trimmedName] || catalogMap[trimExtension(firstImage.name)] || '',
       });
     }
 
@@ -134,6 +141,18 @@ function parsePrice(description) {
   if (!description) return '';
   var match = String(description).match(/([0-9]{2,})/);
   return match ? match[1] : '';
+}
+
+/**
+ * ファイル名の拡張子を取り除く。
+ * @param {string} name
+ * @returns {string}
+ */
+function trimExtension(name) {
+  if (!name) return '';
+  var lastDot = String(name).lastIndexOf('.');
+  if (lastDot <= 0) return String(name);
+  return String(name).slice(0, lastDot);
 }
 
 /**
@@ -179,6 +198,66 @@ function getImageUrl(file) {
   }
 
   return 'https://lh3.googleusercontent.com/d/' + id;
+}
+
+/**
+ * カタログのリンク一覧を取得する。
+ * ルート直下のファイルはファイル名（拡張子除く）をキーに、
+ * サブフォルダ内のファイルはフォルダ名をキーに紐づける。
+ * @returns {Object<string, string>}
+ */
+function getCatalogLinkMap() {
+  if (!DEFAULT_CATALOG_FOLDER_ID) return {};
+
+  try {
+    var catalogRoot = DriveApp.getFolderById(DEFAULT_CATALOG_FOLDER_ID);
+    var catalogMap = {};
+
+    var ensurePublicUrl = function (file) {
+      var id = file && file.getId && file.getId();
+      if (!id) return '';
+
+      try {
+        var access = file.getSharingAccess();
+        var permission = file.getSharingPermission();
+        var isPublic =
+          access === DriveApp.Access.ANYONE_WITH_LINK &&
+          permission === DriveApp.Permission.VIEW;
+
+        if (!isPublic) {
+          file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        }
+      } catch (err) {
+        Logger.log('カタログの公開設定変更に失敗しました: ' + err.message);
+      }
+
+      return 'https://drive.google.com/file/d/' + id + '/view?usp=drivesdk';
+    };
+
+    var assignIfEmpty = function (key, file) {
+      if (!key || catalogMap[key]) return;
+      catalogMap[key] = ensurePublicUrl(file);
+    };
+
+    var rootFiles = catalogRoot.getFiles();
+    while (rootFiles.hasNext()) {
+      var file = rootFiles.next();
+      assignIfEmpty(trimExtension(file.getName()), file);
+    }
+
+    var subfolders = catalogRoot.getFolders();
+    while (subfolders.hasNext()) {
+      var folder = subfolders.next();
+      var files = folder.getFiles();
+      if (files.hasNext()) {
+        assignIfEmpty(trimExtension(folder.getName()), files.next());
+      }
+    }
+
+    return catalogMap;
+  } catch (err) {
+    throw new Error('カタログの取得に失敗しました: ' + err.message);
+  }
 }
 
 /**
