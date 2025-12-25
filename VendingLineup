@@ -263,9 +263,10 @@
       }
 
       .image-grid figcaption {
-        font-size: 13px;
+        font-size: 15px;
+        font-weight: 700;
         margin-top: 6px;
-        color: #3a3f52;
+        color: var(--accent-2);
         text-align: center;
       }
 
