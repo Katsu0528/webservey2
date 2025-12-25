@@ -382,7 +382,7 @@
       }
 
       .lineup-text {
-        text-align: right;
+        text-align: left;
         color: #2f3345;
         line-height: 1.5;
         font-size: 13px;
