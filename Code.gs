@@ -163,6 +163,21 @@ function getFirstImageInfo(folder) {
 function getImageUrl(file) {
   var id = file && file.getId && file.getId();
   if (!id) return '';
+
+  try {
+    var access = file.getSharingAccess();
+    var permission = file.getSharingPermission();
+    var isPublic =
+      access === DriveApp.Access.ANYONE_WITH_LINK &&
+      permission === DriveApp.Permission.VIEW;
+
+    if (!isPublic) {
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    }
+  } catch (err) {
+    Logger.log('画像の公開設定変更に失敗しました: ' + err.message);
+  }
+
   return 'https://lh3.googleusercontent.com/d/' + id;
 }
 
