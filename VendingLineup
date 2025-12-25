@@ -435,23 +435,25 @@
       const FALLBACK_IMAGE =
         'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="360" height="240" viewBox="0 0 360 240"><rect width="360" height="240" fill="%23f2f4f7"/><rect x="30" y="30" width="300" height="180" rx="12" fill="none" stroke="%23c3cad4" stroke-width="8"/><path d="M96 166l48-58 48 58 48-72 24 32" fill="none" stroke="%23c3cad4" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><circle cx="138" cy="90" r="22" fill="%23d8dde5"/></svg>';
 
-        const MAX_TABLE_COLUMNS = 5;
-        const MAX_MANUFACTURERS = MAX_TABLE_COLUMNS - 1;
-
-        const PREFERRED_MANUFACTURER_ORDER = ['ポッカサッポロ', 'アサヒ', 'キリン', '伊藤園'];
-
-        const MANUFACTURER_CATALOG_LINKS = [
-          'https://docs.google.com/presentation/d/1VcC37X82H9wtj3zW_pEVM5B8OWP8ycxXheVJnYal2kQ/edit?usp=sharing',
-          'https://drive.google.com/file/d/1omU2GbhqJlPQ_6RslD-DPa0NO_aJplsK/view?usp=sharing',
-          'https://drive.google.com/file/d/1Y0hQLd3C-9q75exTyQYwQDjMVHNYm-UK/view?usp=sharing',
-          'https://drive.google.com/file/d/1pzSG-GG5S_y7Lq_wXhgaFPwbkQ_Ove2C/view?usp=sharing',
-        ];
+      const MAX_TABLE_COLUMNS = 5;
+      const MAX_MANUFACTURERS = MAX_TABLE_COLUMNS - 1;
 
       const params = new URLSearchParams(window.location.search);
       const maker = params.get('maker') || makerFromTemplate || '';
       const folderId = params.get('folderId') || folderIdFromTemplate || '';
 
       let selectedMakerName = maker || '';
+
+      function buildCatalogUrl(makerName, folderId) {
+        if (!folderId) return '';
+
+        const url = new URL(window.location.href);
+        url.search = '';
+        url.hash = '';
+        url.searchParams.set('maker', makerName || '');
+        url.searchParams.set('folderId', folderId);
+        return url.toString();
+      }
 
       function toEmbeddableUrl(src) {
         if (!src) return '';
@@ -479,50 +481,6 @@
 
       function getMakerDisplayName(entry) {
         return entry.name || trimExtension(entry.imageName) || 'メーカー未設定';
-      }
-
-      function normalizeKey(value) {
-        if (!value) return '';
-        return trimExtension(String(value))
-          .replace(/[\s\u3000\(\)（）_\-]/g, '')
-          .toLowerCase();
-      }
-
-      function enforcePreferredOrder(entries) {
-        const normalizedMap = new Map();
-        entries.forEach((entry) => {
-          const keys = [entry.name, entry.imageName];
-          keys.forEach((key) => {
-            const normalized = normalizeKey(key);
-            if (normalized && !normalizedMap.has(normalized)) {
-              normalizedMap.set(normalized, entry);
-            }
-          });
-        });
-
-        const ordered = PREFERRED_MANUFACTURER_ORDER.map((name) => {
-          const normalized = normalizeKey(name);
-          return (
-            normalizedMap.get(normalized) || {
-              name,
-              imageUrl: '',
-              imageName: '',
-              folderId: '',
-            }
-          );
-        });
-
-        const preferredKeys = new Set(
-          PREFERRED_MANUFACTURER_ORDER.map((name) => normalizeKey(name))
-        );
-
-        entries.forEach((entry) => {
-          const key = normalizeKey(entry.name) || normalizeKey(entry.imageName);
-          if (key && preferredKeys.has(key)) return;
-          ordered.push(entry);
-        });
-
-        return ordered.slice(0, MAX_MANUFACTURERS);
       }
 
       function createImageElement(src, alt) {
@@ -660,6 +618,7 @@
         const normalizedManufacturers = manufacturers.map((entry) => ({
           ...entry,
           name: entry.name || trimExtension(entry.imageName),
+          catalogUrl: buildCatalogUrl(entry.name || trimExtension(entry.imageName), entry.folderId),
         }));
 
         const normalizedMap = new Map(
@@ -679,10 +638,10 @@
         };
 
         const prioritizedManufacturers =
-          normalizedManufacturers.length > 0
-            ? normalizedManufacturers
-            : folderBasedManufacturers.length > 0
+          folderBasedManufacturers.length > 0
             ? folderBasedManufacturers
+            : normalizedManufacturers.length > 0
+            ? normalizedManufacturers
             : [fallbackMaker];
 
         const paddedManufacturers = prioritizedManufacturers
@@ -693,28 +652,30 @@
             return {
               ...entry,
               folderId: entry.folderId || matched.folderId || '',
+              catalogUrl: entry.catalogUrl || matched.catalogUrl || '',
             };
           });
         while (paddedManufacturers.length < MAX_MANUFACTURERS) {
-          paddedManufacturers.push({ name: '未設定', imageUrl: '', imageName: '', folderId: '' });
+          paddedManufacturers.push({ name: '未設定', imageUrl: '', imageName: '', catalogUrl: '', folderId: '' });
         }
 
-        const orderedManufacturers = enforcePreferredOrder(paddedManufacturers);
-
-        const manufacturerEntries = orderedManufacturers.map((makerEntry, index) => {
+        const manufacturerEntries = paddedManufacturers.map((makerEntry) => {
           const name = getMakerDisplayName(makerEntry);
           const isKirin = /キリン/.test(name);
           const isAsahi = /アサヒ/.test(name);
+          const catalogUrl = makerEntry.catalogUrl || buildCatalogUrl(name, makerEntry.folderId);
 
           return {
             name,
             imageUrl: makerEntry.imageUrl || '',
-            catalogUrl: MANUFACTURER_CATALOG_LINKS[index] || makerEntry.catalogUrl || '',
             customStatus: {
               text: isKirin ? '可能' : '不可(販売会社決定)',
               className: isKirin ? 'status-allow' : 'status-deny',
             },
             note: isAsahi ? '※設置できない可能性あり' : '',
+            catalogLink: catalogUrl
+              ? { href: catalogUrl, text: 'カタログを見る' }
+              : '準備中',
           };
         });
 
@@ -766,14 +727,9 @@
 
         const tbody = document.createElement('tbody');
         const rows = [
-          {
-            label: 'カタログ',
-            accessor: (entry) =>
-              entry.catalogUrl
-                ? { href: entry.catalogUrl, text: 'カタログ' }
-                : '',
-          },
+          { label: 'メーカー名', accessor: (entry) => entry.name },
           { label: '商品カスタマイズ', accessor: (entry) => entry.customStatus },
+          { label: 'カタログ', accessor: (entry) => entry.catalogLink, cellClass: 'lineup-text' },
           { label: '備考', accessor: (entry) => entry.note },
         ];
 
