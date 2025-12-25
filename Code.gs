@@ -4,6 +4,23 @@ var DEFAULT_MANUFACTURERS_FOLDER_ID = '1AJd4BTFTVrLNep44PDz1AuwSF_5TFxdx';
 /** メーカーごとのカタログを格納しているフォルダ ID */
 var DEFAULT_CATALOG_FOLDER_ID = '13vPmhzBEPc4X57QrDPogS2tBC5RKCpg6';
 
+/**
+ * マッチング用に文字列を正規化する。
+ * - 拡張子を除去
+ * - スペースや括弧などの記号を除去
+ * - 小文字化
+ * @param {string} value
+ * @returns {string}
+ */
+function normalizeKey(value) {
+  if (!value) return '';
+
+  var trimmed = trimExtension(String(value));
+  return trimmed
+    .replace(/[\s\u3000\(\)（）_\-]/g, '')
+    .toLowerCase();
+}
+
 /** 集計結果を書き込むスプレッドシート ID */
 var SURVEY_SPREADSHEET_ID = '1xkg8vNscpcWTA6GA0VPxGTJCAH6LyvsYhq7VhOlDcXg';
 
@@ -89,17 +106,41 @@ function getManufacturers() {
     var manufacturers = [];
     var catalogMap = getCatalogLinkMap();
 
+    var resolveCatalogUrl = function (names) {
+      var normalizedNames = (names || []).map(normalizeKey).filter(Boolean);
+      if (!normalizedNames.length) return '';
+
+      for (var i = 0; i < normalizedNames.length; i++) {
+        var exact = catalogMap[normalizedNames[i]];
+        if (exact) return exact;
+      }
+
+      var catalogKeys = Object.keys(catalogMap);
+      for (var j = 0; j < normalizedNames.length; j++) {
+        for (var k = 0; k < catalogKeys.length; k++) {
+          var key = catalogKeys[k];
+          var nameKey = normalizedNames[j];
+          var partialMatch = key.indexOf(nameKey) >= 0 || nameKey.indexOf(key) >= 0;
+          if (partialMatch) {
+            return catalogMap[key];
+          }
+        }
+      }
+
+      return '';
+    };
+
     while (folders.hasNext()) {
       var folder = folders.next();
       var firstImage = getFirstImageInfo(folder);
       var trimmedName = trimExtension(folder.getName());
+      var catalogUrl = resolveCatalogUrl([trimmedName, trimExtension(firstImage.name)]);
       manufacturers.push({
         name: folder.getName(),
         folderId: folder.getId(),
         imageUrl: firstImage.url,
         imageName: firstImage.name,
-        catalogUrl:
-          catalogMap[trimmedName] || catalogMap[trimExtension(firstImage.name)] || '',
+        catalogUrl: catalogUrl,
       });
     }
 
@@ -256,8 +297,9 @@ function getCatalogLinkMap() {
     };
 
     var assignIfEmpty = function (key, fileOrUrl) {
-      if (!key || catalogMap[key]) return;
-      catalogMap[key] =
+      var normalizedKey = normalizeKey(key);
+      if (!normalizedKey || catalogMap[normalizedKey]) return;
+      catalogMap[normalizedKey] =
         typeof fileOrUrl === 'string' ? fileOrUrl : ensurePublicUrl(fileOrUrl);
     };
 
