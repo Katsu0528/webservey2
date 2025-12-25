@@ -1,5 +1,8 @@
-/** デフォルトで参照するメーカー一覧フォルダ ID */
-var DEFAULT_MANUFACTURERS_FOLDER_ID = '13vPmhzBEPc4X57QrDPogS2tBC5RKCpg6';
+/** デフォルトで参照するメーカー画像フォルダ ID */
+var DEFAULT_MANUFACTURERS_FOLDER_ID = '1AJd4BTFTVrLNep44PDz1AuwSF_5TFxdx';
+
+/** カタログ PDF を格納するフォルダ ID */
+var DEFAULT_CATALOG_FOLDER_ID = '13vPmhzBEPc4X57QrDPogS2tBC5RKCpg6';
 
 /** 優先的に表示するメーカーの並び順 */
 var PREFERRED_MANUFACTURER_ORDER = ['ポッカサッポロ', 'アサヒ', 'キリン', '伊藤園'];
@@ -95,7 +98,7 @@ function getVendingLineup(maker, folderId) {
 
 /**
  * メーカー一覧を取得する。デフォルトフォルダ配下のサブフォルダをメーカーとして扱う。
- * @returns {Array<{name: string, folderId: string, imageUrl: string}>}
+ * @returns {Array<{name: string, folderId: string, imageUrl: string, catalogUrl: string}>}
  */
 function getManufacturers() {
   if (!DEFAULT_MANUFACTURERS_FOLDER_ID) return [];
@@ -104,15 +107,18 @@ function getManufacturers() {
     var root = DriveApp.getFolderById(DEFAULT_MANUFACTURERS_FOLDER_ID);
     var folders = root.getFolders();
     var manufacturers = [];
+    var catalogMap = getCatalogMap();
 
     while (folders.hasNext()) {
       var folder = folders.next();
       var firstImage = getFirstImageInfo(folder);
+      var normalizedKey = normalizeKey(folder.getName()) || normalizeKey(firstImage.name);
       manufacturers.push({
         name: folder.getName(),
         folderId: folder.getId(),
         imageUrl: firstImage.url,
         imageName: firstImage.name,
+        catalogUrl: normalizedKey && catalogMap[normalizedKey] ? catalogMap[normalizedKey] : '',
       });
     }
 
@@ -135,6 +141,7 @@ function getManufacturers() {
           folderId: '',
           imageUrl: '',
           imageName: '',
+          catalogUrl: '',
         }
       );
     });
@@ -156,6 +163,57 @@ function getManufacturers() {
   } catch (err) {
     throw new Error('メーカー一覧の取得に失敗しました: ' + err.message);
   }
+}
+
+/**
+ * カタログ PDF の URL をメーカー名で引けるマップとして返す。
+ * @returns {Object<string, string>}
+ */
+function getCatalogMap() {
+  if (!DEFAULT_CATALOG_FOLDER_ID) return {};
+
+  try {
+    var folder = DriveApp.getFolderById(DEFAULT_CATALOG_FOLDER_ID);
+    var files = folder.getFiles();
+    var map = {};
+
+    while (files.hasNext()) {
+      var file = files.next();
+      var normalized = normalizeKey(file.getName());
+      if (!normalized) continue;
+      map[normalized] = getCatalogUrl(file);
+    }
+
+    return map;
+  } catch (err) {
+    throw new Error('カタログの取得に失敗しました: ' + err.message);
+  }
+}
+
+/**
+ * PDF を共有リンクとして返す。公開設定が足りなければ自動でリンク共有に切り替える。
+ * @param {GoogleAppsScript.Drive.File} file
+ * @returns {string}
+ */
+function getCatalogUrl(file) {
+  var id = file && file.getId && file.getId();
+  if (!id) return '';
+
+  try {
+    var access = file.getSharingAccess();
+    var permission = file.getSharingPermission();
+    var isPublic =
+      access === DriveApp.Access.ANYONE_WITH_LINK &&
+      permission === DriveApp.Permission.VIEW;
+
+    if (!isPublic) {
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    }
+  } catch (err) {
+    Logger.log('カタログの公開設定変更に失敗しました: ' + err.message);
+  }
+
+  return 'https://drive.google.com/file/d/' + id + '/view?usp=drivesdk';
 }
 
 /**

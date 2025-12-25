@@ -702,6 +702,7 @@
           return {
             name,
             imageUrl: makerEntry.imageUrl || '',
+            catalogUrl: makerEntry.catalogUrl || '',
             customStatus: {
               text: isKirin ? '可能' : '不可(販売会社決定)',
               className: isKirin ? 'status-allow' : 'status-deny',
@@ -758,6 +759,13 @@
 
         const tbody = document.createElement('tbody');
         const rows = [
+          {
+            label: 'カタログ',
+            accessor: (entry) =>
+              entry.catalogUrl
+                ? { href: entry.catalogUrl, text: 'カタログを見る' }
+                : '',
+          },
           { label: '商品カスタマイズ', accessor: (entry) => entry.customStatus },
           { label: '備考', accessor: (entry) => entry.note },
         ];
