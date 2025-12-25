@@ -59,3 +59,68 @@ function ensureChildFolder(parentFolder, childName) {
   }
   return parentFolder.createFolder(childName);
 }
+
+/**
+ * カテゴリ>メーカー>価格 の階層に保存されている画像を、メーカー>カテゴリ>価格 の階層へ整理移動する。
+ * 既に目的の階層が存在する場合は再利用し、必要に応じてフォルダを作成する。
+ *
+ * 例:
+ *  - 移動前: ルート / エナドリ / アサヒ / 120円 / *.jpg
+ *  - 移動後: ルート / アサヒ / エナドリ / 120円 / *.jpg
+ *
+ * @returns {{processedCategories: number, movedFiles: Array<{manufacturer: string, category: string, price: string, count: number}>}}
+ */
+function moveCategoryOrganizedImagesToManufacturerFolders() {
+  var rootFolder = DriveApp.getFolderById(MANUFACTURER_ROOT_FOLDER_ID);
+  var results = [];
+
+  BEVERAGE_CATEGORIES.forEach(function (categoryName) {
+    var sourceCategoryIterator = rootFolder.getFoldersByName(categoryName);
+    if (!sourceCategoryIterator.hasNext()) {
+      return;
+    }
+
+    var sourceCategoryFolder = sourceCategoryIterator.next();
+
+    TARGET_MANUFACTURERS.forEach(function (manufacturerName) {
+      var sourceManufacturerIterator = sourceCategoryFolder.getFoldersByName(manufacturerName);
+      if (!sourceManufacturerIterator.hasNext()) {
+        return;
+      }
+
+      var sourceManufacturerFolder = sourceManufacturerIterator.next();
+      var destinationManufacturerFolder = ensureChildFolder(rootFolder, manufacturerName);
+      var destinationCategoryFolder = ensureChildFolder(
+        destinationManufacturerFolder,
+        categoryName
+      );
+
+      var priceFolders = sourceManufacturerFolder.getFolders();
+      while (priceFolders.hasNext()) {
+        var priceFolder = priceFolders.next();
+        var destinationPriceFolder = ensureChildFolder(
+          destinationCategoryFolder,
+          priceFolder.getName()
+        );
+
+        var files = priceFolder.getFiles();
+        var movedCount = 0;
+
+        while (files.hasNext()) {
+          var file = files.next();
+          file.moveTo(destinationPriceFolder);
+          movedCount += 1;
+        }
+
+        results.push({
+          manufacturer: manufacturerName,
+          category: categoryName,
+          price: priceFolder.getName(),
+          count: movedCount,
+        });
+      }
+    });
+  });
+
+  return { processedCategories: results.length, movedFiles: results };
+}
