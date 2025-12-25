@@ -672,10 +672,10 @@
         };
 
         const prioritizedManufacturers =
-          folderBasedManufacturers.length > 0
-            ? folderBasedManufacturers
-            : normalizedManufacturers.length > 0
+          normalizedManufacturers.length > 0
             ? normalizedManufacturers
+            : folderBasedManufacturers.length > 0
+            ? folderBasedManufacturers
             : [fallbackMaker];
 
         const paddedManufacturers = prioritizedManufacturers
